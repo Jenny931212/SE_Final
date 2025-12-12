@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <title>上傳檔案</title>
+  <style>
+    body {
+      font-family: "Noto Sans TC", "Poppins", sans-serif;
+      background: linear-gradient(120deg, #e0f7ff 0%, #9ad2ff 100%);
+      height: 100vh;
+      margin: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    form {
+      background: #ffffffee;
+      padding: 40px 50px;
+      border-radius: 20px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.12);
+      width: 400px;
+      border-top: 5px solid #58aafc;
+      border-bottom: 5px solid #8ed2ff;
+      backdrop-filter: blur(8px);
+    }
+
+    h1 {
+      text-align: center;
+      color: #2687d3;
+      margin-bottom: 25px;
+      font-weight: 800;
+      letter-spacing: 1px;
+    }
+
+    label {
+      display: block;
+      margin-top: 10px;
+      font-weight: bold;
+      color: #3a3a3a;
+    }
+
+    input[type="file"],
+    input[type="number"] {
+      width: 100%;
+      padding: 10px 12px;
+      margin-top: 6px;
+      margin-bottom: 20px;
+      border: 2px solid #d3eaff;
+      border-radius: 10px;
+      background-color: #f7fbff;
+      transition: all 0.3s ease;
+      font-size: 15px;
+      color: #333;
+    }
+
+    input:focus {
+      border-color: #58aafc;
+      box-shadow: 0 0 8px rgba(88,170,252,0.5);
+      outline: none;
+    }
+
+    button {
+      width: 100%;
+      padding: 12px;
+      background: linear-gradient(90deg, #58aafc, #84caff);
+      color: #fff;
+      border: none;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.25s ease;
+    }
+
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 15px rgba(88,170,252,0.4);
+    }
+
+    p {
+      text-align: center;
+      margin-top: 20px;
+    }
+
+    a {
+      text-decoration: none;
+      color: #2687d3;
+      font-weight: 600;
+    }
+
+    a:hover {
+      text-decoration: underline;
+      color: #58aafc;
+    }
+
+    /* 背景圓形裝飾 */
+    .circle {
+      position: absolute;
+      border-radius: 50%;
+      opacity: 0.25;
+      z-index: -1;
+      animation: float 6s ease-in-out infinite alternate;
+    }
+
+    .circle.one {
+      width: 180px;
+      height: 180px;
+      background: #84caff;
+      top: 12%;
+      left: 10%;
+    }
+
+    .circle.two {
+      width: 240px;
+      height: 240px;
+      background: #58aafc;
+      bottom: 10%;
+      right: 15%;
+    }
+
+    @keyframes float {
+      from { transform: translateY(0px); }
+      to { transform: translateY(25px); }
+    }
+  </style>
+</head>
+<body>
+  <div class="circle one"></div>
+  <div class="circle two"></div>
+
+  <form method="post" action="/upload/submit" enctype="multipart/form-data">
+    <h1>上傳檔案</h1>
+
+    <label>案子 ID：</label>
+    <input type="number" name="job_id" required />
+
+    <label>選擇檔案：</label>
+    <input type="file" name="file" required />
+
+    <button type="submit">上傳</button>
+
+    <p><a href="/jobs/">返回案子列表</a></p>
+  </form>
+</body>
+</html>

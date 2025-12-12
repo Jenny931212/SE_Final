@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <title>提交報價</title>
+
+  <style>
+    body {
+      font-family: "Noto Sans TC", Arial, sans-serif;
+      background-color: #f5faff;
+      color: #333;
+      margin: 0;
+      padding: 40px;
+      line-height: 1.6;
+    }
+
+    h1 {
+      text-align: center;
+      color: #1d5ea8;
+      font-weight: 800;
+      letter-spacing: 1px;
+      margin-bottom: 30px;
+    }
+
+    form {
+      width: 480px;
+      margin: 0 auto;
+      background: #fff;
+      padding: 35px 40px;
+      border-radius: 12px;
+      box-shadow: 0 6px 15px rgba(0,0,0,0.08);
+      border-top: 4px solid #5ca8ff;
+    }
+
+    p { margin-bottom: 10px; }
+
+    label {
+      display: block;
+      margin-top: 15px;
+      font-weight: 600;
+      color: #245a9b;
+    }
+
+    input, textarea {
+      width: 100%;
+      padding: 10px;
+      margin-top: 6px;
+      border: 1.5px solid #d7e6ff;
+      border-radius: 8px;
+      background-color: #f8fbff;
+      font-size: 15px;
+    }
+
+    input:focus, textarea:focus {
+      border-color: #5ca8ff;
+      outline: none;
+      box-shadow: 0 0 5px rgba(92,168,255,0.4);
+      background-color: #fff;
+    }
+
+    /* ⭐⭐⭐ PDF 上傳美化 START */
+    .upload-box {
+      margin-top: 10px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+
+    #proposal {
+      display: none;
+    }
+
+    .upload-btn {
+      background: linear-gradient(135deg, #7ec8ff, #4fa8ff);
+      padding: 10px 22px;
+      color: white;
+      border-radius: 10px;
+      cursor: pointer;
+      font-weight: 700;
+      font-size: 15px;
+      transition: all 0.25s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 4px 10px rgba(90,150,255,0.25);
+    }
+
+    .upload-btn:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 18px rgba(80,140,255,0.35);
+    }
+
+    .file-name {
+      font-size: 14px;
+      color: #245a9b;
+      min-width: 200px;
+      background: #eef6ff;
+      padding: 6px 10px;
+      border-radius: 6px;
+      border: 1px solid #d0e5ff;
+    }
+    /* ⭐⭐⭐ PDF 上傳美化 END */
+
+    button {
+      width: 100%;
+      margin-top: 25px;
+      padding: 12px;
+      background-color: #5ca8ff;
+      border: none;
+      border-radius: 8px;
+      color: #fff;
+      font-weight: 700;
+      font-size: 15px;
+      cursor: pointer;
+      transition: all 0.25s ease;
+    }
+
+    button:hover {
+      background-color: #3f91eb;
+      box-shadow: 0 4px 10px rgba(63,145,235,0.3);
+    }
+
+    .back-link {
+      text-align: center;
+      margin-top: 25px;
+    }
+
+    .back-link a {
+      text-decoration: none;
+      color: #2b6cb0;
+      font-weight: 600;
+    }
+  </style>
+
+</head>
+
+<body>
+
+  <h1>提交報價</h1>
+
+  <form method="post" action="/bid/submit" enctype="multipart/form-data">
+
+    <input type="hidden" name="job_id" value="{{ job_id }}" />
+
+    <p><strong>案子名稱：</strong>{{ job.title }}</p>
+    <p><strong>委託者（甲方）：</strong>{{ job.owner_name }}</p>
+    <p><strong>案子描述：</strong>{{ job.description }}</p>
+    <p><strong>預算：</strong>{{ job.budget }}</p>
+
+    <label>報價金額：</label>
+    <input type="number" name="price" required />
+
+    <label>報價訊息：</label>
+    <textarea name="message" rows="3"></textarea>
+
+    <!-- ⭐⭐⭐ PDF 計畫書上傳（必填） -->
+    <label>上傳 PDF 計畫書（必填）：</label>
+    <div class="upload-box">
+      <label for="proposal" class="upload-btn">📄 選擇檔案</label>
+      <input type="file" id="proposal" name="proposal" accept="application/pdf" required>
+      <span id="file-name" class="file-name">未選擇任何檔案</span>
+    </div>
+
+    <button type="submit">送出報價</button>
+  </form>
+
+  <div class="back-link">
+    <a href="/bid/available">返回可接案清單</a>
+  </div>
+
+  <script>
+    const fileInput = document.getElementById("proposal");
+    const fileName = document.getElementById("file-name");
+
+    fileInput.addEventListener("change", () => {
+      fileName.textContent = fileInput.files.length
+        ? fileInput.files[0].name
+        : "未選擇任何檔案";
+    });
+  </script>
+
+</body>
+</html>

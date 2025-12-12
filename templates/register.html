@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <title>註冊新帳號</title>
+  <style>
+    body {
+      font-family: "Noto Sans TC", "Poppins", sans-serif;
+      background: linear-gradient(120deg, #e0f7ff 0%, #9ad2ff 100%);
+      height: 100vh;
+      margin: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    form {
+      background: #ffffffee;
+      padding: 40px 50px;
+      border-radius: 20px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.12);
+      width: 380px;
+      border-top: 5px solid #58aafc;
+      border-bottom: 5px solid #8ed2ff;
+      backdrop-filter: blur(8px);
+    }
+
+    h2 {
+      text-align: center;
+      color: #2687d3;
+      margin-bottom: 25px;
+      font-weight: 800;
+      letter-spacing: 1px;
+    }
+
+    label {
+      display: block;
+      margin-top: 10px;
+      font-weight: bold;
+      color: #3a3a3a;
+    }
+
+    input,
+    select {
+      width: 100%;
+      padding: 10px 12px;
+      margin-top: 5px;
+      border: 2px solid #d3eaff;
+      border-radius: 10px;
+      background-color: #f7fbff;
+      transition: all 0.3s ease;
+      font-size: 15px;
+      color: #333;
+    }
+
+    input:focus,
+    select:focus {
+      border-color: #58aafc;
+      box-shadow: 0 0 8px rgba(88,170,252,0.5);
+      outline: none;
+    }
+
+    button {
+      width: 100%;
+      margin-top: 20px;
+      padding: 12px;
+      background: linear-gradient(90deg, #58aafc, #84caff);
+      color: #fff;
+      border: none;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.25s ease;
+    }
+
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 15px rgba(88,170,252,0.4);
+    }
+
+    .center {
+      text-align: center;
+      margin-top: 20px;
+    }
+
+    .link-btn {
+      display: inline-block;
+      padding: 10px 16px;
+      border-radius: 8px;
+      background: linear-gradient(90deg, #d8ecff, #eaf5ff);
+      color: #2687d3;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all 0.25s ease;
+    }
+
+    .link-btn:hover {
+      background: linear-gradient(90deg, #c9e2ff, #dff0ff);
+      color: #1b6ebf;
+      transform: translateY(-1px);
+    }
+
+    p {
+      text-align: center;
+      font-size: 14px;
+    }
+
+    p[style*="color:red"] {
+      text-align: center;
+      font-weight: bold;
+      color: #e74c3c !important;
+    }
+
+    p[style*="color:green"] {
+      text-align: center;
+      font-weight: bold;
+      color: #2ecc71 !important;
+    }
+
+    /* 背景圓形裝飾 */
+    .circle {
+      position: absolute;
+      border-radius: 50%;
+      opacity: 0.25;
+      z-index: -1;
+      animation: float 6s ease-in-out infinite alternate;
+    }
+
+    .circle.one {
+      width: 180px;
+      height: 180px;
+      background: #84caff;
+      top: 12%;
+      left: 10%;
+    }
+
+    .circle.two {
+      width: 240px;
+      height: 240px;
+      background: #58aafc;
+      bottom: 10%;
+      right: 15%;
+    }
+
+    @keyframes float {
+      from { transform: translateY(0px); }
+      to { transform: translateY(25px); }
+    }
+  </style>
+</head>
+<body>
+  <div class="circle one"></div>
+  <div class="circle two"></div>
+
+  <form action="/register" method="post">
+    <h2>註冊新帳號</h2>
+
+    {% if error %}
+      <p style="color:red;">{{ error }}</p>
+    {% endif %}
+    {% if ok %}
+      <p style="color:green;">{{ ok }}</p>
+    {% endif %}
+
+    <label>使用者名稱（不可重複）：</label>
+    <input type="text" name="username" required>
+
+    <label>密碼：</label>
+    <input type="password" name="password" required>
+
+    <label>角色：</label>
+    <select name="role" required>
+      <option value="client">甲方（Client）</option>
+      <option value="contractor">乙方（Contractor）</option>
+    </select>
+
+    <button type="submit">建立帳號</button>
+
+    <div class="center">
+      <a href="/login" class="link-btn">已有帳號？前往登入</a>
+    </div>
+  </form>
+</body>
+</html>

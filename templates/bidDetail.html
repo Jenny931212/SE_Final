@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8" />
+    <title>報價詳情</title>
+    <style>
+        body {
+            font-family: "Noto Sans TC", "Poppins", sans-serif;
+            background: linear-gradient(120deg, #e0f7ff 0%, #9ad2ff 100%);
+            height: 100vh;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .content {
+            background: #ffffffee;
+            width: 600px;
+            padding: 40px 50px;
+            border-radius: 20px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.12);
+            border-top: 5px solid #58aafc;
+            border-bottom: 5px solid #8ed2ff;
+            backdrop-filter: blur(8px);
+        }
+
+        h1 {
+            text-align: center;
+            color: #2687d3;
+            margin-bottom: 25px;
+            font-weight: 800;
+            letter-spacing: 1px;
+        }
+
+        p {
+            line-height: 1.8;
+            font-size: 15px;
+            color: #333;
+        }
+
+        strong {
+            color: #226cb5;
+        }
+
+        hr {
+            border: none;
+            border-top: 1px dashed #b4dcff;
+            margin: 20px 0;
+        }
+
+        a {
+            text-decoration: none;
+            color: #2687d3;
+            font-weight: 600;
+            transition: all 0.25s ease;
+        }
+
+        a:hover {
+            color: #1b6ebf;
+            text-decoration: underline;
+        }
+
+        /* 返回按鈕風格一致 */
+        .link-btn {
+            display: inline-block;
+            padding: 10px 16px;
+            border-radius: 8px;
+            background: linear-gradient(90deg, #d8ecff, #eaf5ff);
+            color: #2687d3;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.25s ease;
+        }
+
+        .link-btn:hover {
+            background: linear-gradient(90deg, #c9e2ff, #dff0ff);
+            color: #1b6ebf;
+            transform: translateY(-1px);
+        }
+
+        /* 背景飄浮圓形裝飾 */
+        .circle {
+            position: absolute;
+            border-radius: 50%;
+            opacity: 0.25;
+            z-index: -1;
+            animation: float 6s ease-in-out infinite alternate;
+        }
+
+        .circle.one {
+            width: 180px;
+            height: 180px;
+            background: #84caff;
+            top: 10%;
+            left: 12%;
+        }
+
+        .circle.two {
+            width: 240px;
+            height: 240px;
+            background: #58aafc;
+            bottom: 10%;
+            right: 15%;
+        }
+
+        @keyframes float {
+            from { transform: translateY(0px); }
+            to { transform: translateY(25px); }
+        }
+    </style>
+</head>
+<body>
+    <div class="circle one"></div>
+    <div class="circle two"></div>
+
+    <div class="content">
+        <h1>報價詳情</h1>
+
+        <p>
+            <strong>案子名稱：</strong>
+            {# ⭐ 關鍵修正：新增連結到案子詳情頁 (jobs/{job_id}) #}
+            <a href="/jobs/{{ bid.job_id }}"> 
+                {{ bid.title }}
+            </a>
+        </p>
+        <p><strong>委託者（甲方）：</strong>{{ bid.owner_name }}</p>
+        <p><strong>案子描述：</strong>{{ bid.description or "（無描述）" }}</p>
+        <p><strong>預算：</strong>{{ bid.budget }}</p>
+        <p><strong>案子狀態：</strong>{{ bid.job_status }}</p>
+
+        <hr>
+
+        <p><strong>我的報價金額：</strong>{{ bid.price }}</p>
+        <p><strong>我的訊息：</strong>{{ bid.message }}</p>
+        <p><strong>報價狀態：</strong>{{ bid.bid_status }}</p>
+
+        <hr>
+
+        <p style="text-align:center;">
+            <a href="/bid/mybids" class="link-btn">返回我的報價清單</a>
+        </p>
+    </div>
+</body>
+</html>

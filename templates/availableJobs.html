@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <title>可接案清單</title>
+  <style>
+    body {
+      font-family: "Noto Sans TC", "Poppins", sans-serif;
+      background: linear-gradient(120deg, #e0f7ff 0%, #9ad2ff 100%);
+      margin: 0;
+      padding: 40px 0;
+    }
+
+    h1 {
+      text-align: center;
+      color: #2687d3;
+      font-weight: 800;
+      margin-bottom: 20px;
+      letter-spacing: 1px;
+    }
+
+    table {
+      width: 90%;
+      margin: 0 auto 30px;
+      border-collapse: collapse;
+      background: #ffffffee;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 6px 15px rgba(0,0,0,0.08);
+    }
+
+    th, td {
+      border: 1px solid #e0ecff;
+      padding: 12px;
+      text-align: center;
+    }
+
+    th {
+      background: linear-gradient(90deg, #6cb8ff, #86c8ff);
+      color: white;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+    }
+
+    tr:nth-child(even) {
+      background-color: #f7fbff;
+    }
+
+    tr:hover {
+      background-color: #eaf5ff;
+      transition: background-color 0.2s ease;
+    }
+
+    a {
+      color: #2687d3;
+      text-decoration: none;
+      font-weight: 600;
+      transition: color 0.2s ease;
+    }
+
+    div {
+      text-align: center;
+      margin-bottom: 25px;
+    }
+
+    div a {
+      background: linear-gradient(90deg, #d8ecff, #eaf5ff);
+      padding: 8px 14px;
+      border-radius: 8px;
+      margin: 0 5px;
+      color: #2687d3;
+      font-weight: 600;
+      display: inline-block;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    }
+
+    .action-link {
+      display: inline-block;
+      padding: 6px 12px;
+      border-radius: 8px;
+      background: linear-gradient(90deg, #58aafc, #84caff);
+      color: white;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.25s ease;
+      text-decoration: none;
+    }
+
+    p {
+      text-align: center;
+      font-size: 15px;
+      color: #555;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>目前可接案的清單</h1>
+
+  <div>
+    <a href="/bid/available"><strong>可接案清單</strong></a> ｜ 
+    <a href="/bid/mybids"><strong>我的報價清單</strong></a> ｜ 
+    <a href="/logout">登出</a>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>標題</th>
+        <th>甲方</th>
+        <th>預算</th>
+        <th>狀態</th>
+        <th>截止時間</th>
+        <th>操作</th>
+      </tr>
+    </thead>
+
+    <tbody>
+      {% for item in items %}
+      <tr>
+        <td>{{ item.id }}</td>
+        <td>{{ item.title }}</td>
+        <td>{{ item.owner_name }}</td>
+        <td>{{ item.budget }}</td>
+        <td>{{ item.status }}</td>
+
+        <td>
+          {% if item.bidding_deadline %}
+            {{ item.bidding_deadline }}
+          {% else %}
+            無
+          {% endif %}
+        </td>
+
+        <td>
+          {% if item.already_bid %}
+            <span style="color: gray; font-weight: 600;">已報價</span>
+          {% else %}
+            <a href="/bid/bid_form/{{ item.id }}" class="action-link">報價</a>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  {% if not items %}
+  <p>目前沒有可接案的委託。</p>
+  {% endif %}
+</body>
+</html>

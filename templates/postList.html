@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8"/>
+<title>委託案列表（甲方）</title>
+<style>
+body {
+    font-family: "Noto Sans TC", "Poppins", Arial, sans-serif;
+    background: linear-gradient(120deg, #f5faff 0%, #e9f2ff 100%);
+    margin: 40px;
+    color: #333;
+}
+
+h2 {
+    text-align: center;
+    color: #2e3b55;
+    letter-spacing: 1px;
+    margin-bottom: 20px;
+    font-weight: 800;
+}
+
+.top-bar {
+    text-align: center;
+    margin-bottom: 25px;
+}
+
+.top-bar a {
+    margin: 0 10px;
+    font-weight: 600;
+    color: #fff;
+    background: linear-gradient(90deg, #6cb8ff, #86c8ff);
+    padding: 8px 18px;
+    border-radius: 8px;
+    box-shadow: 0 3px 6px rgba(0,0,0,0.1);
+    transition: all 0.25s ease;
+}
+
+.top-bar a:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 10px rgba(108,184,255,0.4);
+}
+
+table {
+    border-collapse: collapse;
+    width: 90%;
+    margin: 0 auto 30px;
+    background-color: #fff;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+}
+
+th, td {
+    border: 1px solid #e5edf9;
+    padding: 12px;
+    text-align: center;
+}
+
+th {
+    background: linear-gradient(90deg, #7fb8ff, #9dd0ff);
+    color: #fff;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+}
+
+tr:nth-child(even) {
+    background-color: #f8fbff;
+}
+
+tr:hover {
+    background-color: #f1f7ff;
+    transition: background-color 0.2s ease;
+}
+
+a {
+    text-decoration: none;
+    color: #4a9ce6;
+    font-weight: 600;
+    transition: color 0.2s ease;
+}
+
+a:hover {
+    color: #1e74d8;
+}
+
+.status {
+    font-weight: bold;
+}
+
+.status span {
+    padding: 5px 12px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    display: inline-block;
+}
+
+/* 新增/修正狀態樣式 */
+.status-bidding { /* 報價中 */
+    color: #e39d00;
+    background-color: #fff4d9;
+}
+.status-pending_review { /* 等待挑選 */
+    color: #7b5cc1;
+    background-color: #ede7f6;
+}
+.status-in_progress { /* 執行中 */
+    color: #285f9a;
+    background-color: #dcecff;
+}
+.status-reviewing { /* 待審核/驗收 */
+    color: #c0392b;
+    background-color: #ffe3e3;
+}
+.status-in_revision { /* 待修改/退件 */
+    color: #a0522d;
+    background-color: #fff0d9;
+}
+.status-completed { /* 已完成 */
+    color: #2e8b57;
+    background-color: #d9f1ff;
+}
+.status-rejected { /* 已拒絕 */
+    color: #4577a5;
+    background-color: #e8f4ff;
+}
+
+p {
+    text-align: center;
+    font-size: 15px;
+}
+
+body, table, .top-bar a {
+    transition: all 0.3s ease;
+}
+</style>
+</head>
+<body>
+<h2>委託案列表（甲方）</h2>
+
+<div class="top-bar">
+    <a href="/jobs/add/form">➕ 新增案子</a> |
+    <a href="/logout">🚪 登出</a>
+</div>
+
+<table>
+<thead>
+    <tr>
+        <th>ID</th>
+        <th>案子名稱</th>
+        <th>預算</th>
+        <th>狀態</th>
+        <th>操作</th>
+    </tr>
+</thead>
+
+<tbody>
+{% for item in items %}
+    <tr>
+        <td>{{ item.id }}</td>
+        <td>{{ item.title }}</td>
+        <td>{{ item.budget }}</td>
+        <td class="status">
+            {# 狀態翻譯邏輯 #}
+            {% if item.status == 'bidding' %}
+                <span class="status-bidding">報價中</span>
+            {% elif item.status == 'pending_review' %}
+                <span class="status-pending_review">等待挑選</span>
+            {% elif item.status == 'in_progress' %}
+                <span class="status-in_progress">執行中</span>
+            {% elif item.status == 'reviewing' %}
+                <span class="status-reviewing">待審核/驗收</span> 
+            {% elif item.status == 'in_revision' %}
+                <span class="status-in_revision">待修改</span> 
+            {% elif item.status == 'completed' %}
+                <span class="status-completed">已完成</span>
+            {% elif item.status == 'rejected' %}
+                <span class="status-rejected">已拒絕</span>
+            {% else %}
+                <span>未知</span>
+            {% endif %}
+        </td>
+        <td>
+            <a href="/jobs/{{ item.id }}">查看</a>
+            │
+            <a href="/jobs/delete/{{ item.id }}" onclick="return confirm('確定要刪除此案子嗎？')">刪除</a>
+            {% if item.status == 'bidding' %}
+                │ <a href="/jobs/edit/{{ item.id }}">修改</a>
+            {% endif %}
+        </td>
+    </tr>
+{% endfor %}
+</tbody>
+</table>
+
+{% if not items %}
+    <p style="color:#777;">目前沒有委託案。</p>
+{% endif %}
+</body>
+</html>

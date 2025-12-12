@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8" />
+    <title>我的報價清單</title>
+    <style>
+        body {
+            font-family: "Noto Sans TC", "Poppins", sans-serif;
+            background: linear-gradient(120deg, #e0f7ff 0%, #9ad2ff 100%);
+            margin: 0;
+            padding: 40px 0;
+        }
+
+        h1 {
+            text-align: center;
+            color: #2687d3;
+            font-weight: 800;
+            margin-bottom: 20px;
+            letter-spacing: 1px;
+        }
+
+        table {
+            width: 90%;
+            margin: 0 auto 30px;
+            border-collapse: collapse;
+            background: #ffffffee;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 6px 15px rgba(0,0,0,0.08);
+        }
+
+        th, td {
+            border: 1px solid #e0ecff;
+            padding: 12px;
+            text-align: center;
+            font-size: 15px;
+        }
+
+        th {
+            background: linear-gradient(90deg, #6cb8ff, #86c8ff);
+            color: white;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f7fbff;
+        }
+
+        tr:hover {
+            background-color: #eaf5ff;
+            transition: background-color 0.2s ease;
+        }
+
+        a {
+            color: #2687d3;
+            text-decoration: none;
+            font-weight: 600;
+            transition: color 0.2s ease;
+        }
+
+        a:hover {
+            color: #1b6ebf;
+            text-decoration: underline;
+        }
+
+        div {
+            text-align: center;
+            margin-bottom: 25px;
+        }
+
+        div a {
+            background: linear-gradient(90deg, #d8ecff, #eaf5ff);
+            padding: 8px 14px;
+            border-radius: 8px;
+            margin: 0 5px;
+            color: #2687d3;
+            font-weight: 600;
+            display: inline-block;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+
+        .status-accepted { color: #2e8b57; font-weight: bold; }
+        .status-rejected { color: #999; }
+        .status-pending { color: #e39d00; }
+        .status-in_progress { color: #1d5ea8; font-weight: bold; }
+        .status-completed { color: #2e8b57; font-weight: bold; }
+
+        p {
+            text-align: center;
+            font-size: 15px;
+            color: #555;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>我的報價清單</h1>
+
+    <div>
+        <a href="/bid/available">可接案清單</a> ｜ 
+        <a href="/bid/mybids"><strong>我的報價清單</strong></a> ｜ 
+        <a href="/logout">登出</a>
+    </div>
+
+    {% if items %}
+    <table>
+        <thead>
+            <tr>
+                <th>報價 ID</th>
+                <th>案子名稱</th>
+                <th>甲方</th>
+                <th>我的報價金額</th>
+                <th>我的訊息</th>
+                <th>案子狀態</th>
+                <th>報價狀態</th>
+                {# 這裡不需要操作欄位，因為操作都在案子詳情頁 #}
+            </tr>
+        </thead>
+
+        <tbody>
+            {% for item in items %}
+            <tr>
+                <td>{{ item.id }}</td>
+                <td>
+                    <a href="/bid/mybids/{{ item.id }}">
+                        {{ item.title }}
+                    </a>
+                </td>
+                <td>{{ item.owner_name }}</td>
+                <td>{{ item.price }}</td>
+                <td>{{ item.message }}</td>
+                <td>
+                    <span class="status-{{ item.job_status }}">{{ item.job_status }}</span>
+                </td>
+                <td>
+                    <span class="status-{{ item.bid_status }}">{{ item.bid_status }}</span>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    {% else %}
+    <p>目前沒有任何報價紀錄。</p>
+    {% endif %}
+
+</body>
+</html>

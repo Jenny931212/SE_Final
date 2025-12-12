@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8" />
+    <title>案子詳情</title>
+    <style>
+        body {
+            font-family: "Noto Sans TC", Arial, sans-serif;
+            background-color: #f7faff;
+            color: #333;
+            margin: 40px;
+            line-height: 1.7;
+        }
+
+        h1 {
+            text-align: center;
+            color: #1d5ea8;
+            font-weight: 800;
+            margin-bottom: 25px;
+        }
+
+        h3 {
+            color: #1d5ea8;
+            margin-top: 40px;
+            border-left: 4px solid #5ca8ff;
+            padding-left: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .content {
+            width: 720px;
+            margin: 0 auto;
+            background: #fff;
+            border-radius: 12px;
+            padding: 35px 45px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+        }
+
+        p {
+            margin: 10px 0;
+            font-size: 15.5px;
+        }
+
+        strong {
+            color: #245a9b;
+        }
+
+        hr {
+            border: none;
+            border-top: 1px solid #e0ecff;
+            margin: 25px 0;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            font-size: 15px;
+        }
+
+        th, td {
+            border: 1px solid #e0ecff;
+            padding: 10px;
+            text-align: center;
+        }
+
+        th {
+            background-color: #eaf4ff;
+            color: #1d5ea8;
+            font-weight: 700;
+        }
+
+        tr:nth-child(even) { background-color: #f8fbff; }
+        tr:hover { background-color: #edf5ff; }
+
+        a {
+            text-decoration: none;
+            color: #2b6cb0;
+            font-weight: 600;
+        }
+
+        a:hover { text-decoration: underline; color: #1a5da0; }
+
+        .accepted { color: #2e8b57; font-weight: bold; }
+        .rejected { color: #999; }
+        .pending { color: #e39d00; }
+        .reviewing { color: #c0392b; font-weight: bold; }
+        .completed { color: #2e8b57; font-weight: bold; }
+
+        /* 上傳盒子 */
+        .upload-box {
+            margin-top: 10px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            flex-wrap: wrap;
+        }
+
+        /* 隱藏原生 input */
+        #file-input { display: none; }
+
+        /* 美化後的 Upload 按鈕 */
+        .upload-btn {
+            background: linear-gradient(135deg, #7ec8ff, #4fa8ff);
+            padding: 10px 22px;
+            color: white;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 700;
+            font-size: 15px;
+            transition: all 0.25s ease;
+            border: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 4px 10px rgba(90, 150, 255, 0.25);
+        }
+
+        .upload-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 18px rgba(80, 140, 255, 0.35);
+        }
+
+        /* 檔名 */
+        .file-name {
+            font-size: 14px;
+            color: #245a9b;
+            min-width: 200px;
+            background: #eef6ff;
+            padding: 6px 10px;
+            border-radius: 6px;
+            border: 1px solid #d0e5ff;
+        }
+
+        /* 送出按鈕 */
+        .submit-btn {
+            background: linear-gradient(135deg, #1d5ea8, #144b87);
+            padding: 10px 20px;
+            color: white;
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: 700;
+            border: none;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            box-shadow: 0 4px 10px rgba(29,94,168,0.25);
+        }
+
+        .submit-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 18px rgba(29,94,168,0.35);
+        }
+
+        .back {
+            display: block;
+            text-align: center;
+            margin-top: 25px;
+            font-weight: 600;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>案子詳情</h1>
+    <div class="content">
+
+        <p><strong>標題：</strong>{{ job.title }}</p>
+        <p><strong>委託者（甲方）：</strong>{{ job.owner_name }}</p>
+        <p><strong>描述：</strong>{{ job.description or "（無描述）" }}</p>
+        <p><strong>預算：</strong>{{ job.budget }}</p>
+
+        <p>
+            <strong>狀態：</strong>
+            {% if job.status == "bidding" %}
+                <span style="color: #e39d00;">報價中</span>
+            {% elif job.status == "pending_review" %}
+                <span style="color: #7b5cc1;">等待甲方挑選報價</span>
+            {% elif job.status == "in_progress" %}
+                <span style="color: #1d5ea8;">執行中</span>
+            {% elif job.status == "reviewing" %}
+                <span class="reviewing">待甲方審核/驗收</span>
+            {% elif job.status == "completed" %}
+                <span class="completed">已完成 🎉</span>
+            {% endif %}
+        </p>
+
+        <p><strong>截止時間：</strong>
+            {% if job.bidding_deadline %}
+                {{ job.bidding_deadline }}
+            {% else %}
+                未設定
+            {% endif %}
+        </p>
+
+        <hr />
+
+        <h3>報價清單（乙方）</h3>
+
+        {% if bids %}
+        <table>
+            <tr>
+                <th>ID</th>
+                <th>報價者</th>
+                <th>金額</th>
+                <th>訊息</th>
+                <th>狀態</th>
+                <th>操作</th>
+            </tr>
+
+            {% for b in bids %}
+            <tr>
+                <td>{{ b.id }}</td>
+                <td>{{ b.bidder_name }}</td>
+                <td>{{ b.price }}</td>
+                <td>{{ b.message }}</td>
+                <td>
+                    {% if b.status == "pending" %}
+                        <span class="pending">待審核</span>
+                    {% elif b.status == "accepted" %}
+                        <span class="accepted">已接受</span>
+                    {% elif b.status == "rejected" %}
+                        <span class="rejected">已拒絕</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {# ⭐ 修正後的路由，避免衝突 #}
+                    {% if job.status in ["bidding", "pending_review"] and b.status == "pending" %}
+                        <a href="/jobs/actions/accept_bid/{{ job.id }}/{{ b.id }}" style="color: #2e8b57; font-weight: bold;">接受</a> │ 
+                        <a href="/jobs/actions/reject_bid/{{ job.id }}/{{ b.id }}" style="color: #c0392b;">拒絕</a>
+                    {% else %} — {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </table>
+        {% else %}
+            <p>目前尚無報價。</p>
+        {% endif %}
+
+        {# ============================================================== #}
+        {# ⭐ 甲方審核操作區塊 (僅在 reviewing 狀態且為案主時顯示) #}
+        {# ============================================================== #}
+        {% if job.status == "reviewing" and role == "client" and current_user_id == job.owner_id %}
+            <hr style="margin-top: 25px;"/>
+            <h3 style="color: #c0392b;">甲方審核操作 (待驗收)</h3>
+            <p style="margin-top: 15px">
+                🔴 <a href="/jobs/reject_work/{{ job.id }}" style="color: #c0392b; font-weight: bold;" 
+                   onclick="return confirm('確定要退回給乙方修改嗎？退回後，狀態將回到執行中 (in_progress)。');">
+                   要求修改/退件
+                </a>
+                
+                <span style="margin: 0 15px;">|</span>
+                
+                📦 <a href="/jobs/complete/{{ job.id }}" style="color: #2e8b57; font-weight: bold;"
+                   onclick="return confirm('確定驗收成果並結案嗎？結案後將無法修改狀態。');">
+                   ✅ 驗收並結案
+                </a>
+            </p>
+        {% endif %}
+
+        {# 執行中/已完成狀態操作 #}
+        {% if job.status == "in_progress" %}
+        <p style="margin-top: 15px">
+            {% if role == "client" and current_user_id == job.owner_id %}
+            {# 只有甲方能手動標記完成 (在乙方尚未送審時) #}
+            📦 <a href="/jobs/complete/{{ job.id }}">標記為完成</a>
+            {% else %}
+            <span style="color: #1d5ea8;">等待乙方提交成果</span>
+            {% endif %}
+        </p>
+        {% elif job.status == "completed" %}
+        <p style="color: green">此案已完成，感謝合作！🎉</p>
+        {% endif %}
+
+        <hr />
+
+        <h3>附件上傳</h3>
+
+        {# 上傳權限由 jobs.py 的 job_detail 傳入 can_upload 控制 #}
+        {% if can_upload %}
+        <form action="/jobs/upload" method="post" enctype="multipart/form-data" class="upload-box">
+            <input type="hidden" name="job_id" value="{{ job.id }}">
+
+            <label for="file-input" class="upload-btn">📄 選擇檔案</label>
+            <input id="file-input" type="file" name="file" required>
+
+            <span id="file-name" class="file-name">尚未選擇檔案</span>
+
+            <button type="submit" class="submit-btn">上傳</button>
+        </form>
+
+        <script>
+            const fileInput = document.getElementById("file-input");
+            const fileName = document.getElementById("file-name");
+
+            fileInput.addEventListener("change", () => {
+                fileName.textContent = fileInput.files.length
+                    ? fileInput.files[0].name
+                    : "尚未選擇檔案";
+            });
+        </script>
+
+        {% else %}
+        <p style="color: gray;">（你沒有上傳權限）</p>
+        {% endif %}
+
+       {% if files %}
+        {# ⭐ 修正後的歷史檔案列表：顯示版本、優化樣式 #}
+        <h4>已上傳的檔案：</h4>
+        <ul style="list-style-type: none; padding-left: 0;">
+            {% for f in files %}
+            <li style="margin-bottom: 8px; border-left: 3px solid #6cb8ff; padding-left: 10px;">
+                <a href="/static/uploads/{{ f.filename }}" download style="font-weight: bold; color: #2e3b55;">
+                    📄 {{ f.original_name }} 
+                </a>
+                
+                <span style="font-size: 14px; color: #666; margin-left: 10px;">
+                    (版本: V{{ f.version or 1 }}，上傳者: {{ f.uploader_name }}，角色: {{ f.role }}，
+                    上傳時間: {{ f.upload_time | default('未知') }})
+                </span>
+            </li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <p>目前沒有上傳的檔案。</p>
+        {% endif %}
+
+        <hr />
+        <a class="back" href="/jobs/">返回列表</a>
+    </div>
+</body>
+</html>
+
+        <hr />
+        <a class="back" href="/jobs/">返回列表</a>
+    </div>
+</body>
+</html>

@@ -1,0 +1,66 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>Basic HTML Examples</title>
+</head>
+<body>
+<p><a href="/checkLogin">Check Login</a></p>
+<p><a href="/img/login.html">Login</a></p>
+<p><a href="/logout">Logout</a></p>
+<hr>
+<img src="dog.jpg" width="30%">
+<audio controls src="bark.mp3"></audio>
+<!-- This is a note or comment -->
+<!-- table -->
+<p>表格</p>
+<table width="200" border="1">
+  <tr>
+    <td>#</td>
+    <td>sales</td>
+    <td>total</td>
+  </tr>
+  <tr>
+    <td>1</td>
+    <td>$100</td>
+    <td>$100</td>
+  </tr>  <tr>
+    <td>2</td>
+    <td>$150</td>
+    <td>$250</td>
+  </tr>
+</table>
+<hr>
+
+<!-- form -->
+<p>表單</p>
+換行<br>
+<form method="POST" action="/readForm/123?q=999">
+field title: <input type="text" name="txt" value="9999"> <br>
+title: <textarea name="note">
+hello
+This is text area
+</textarea> <br>
+<select name="sel">
+<option value="111">aaa</option>
+<option value="222" selected>bbb</option>
+<option value="333">ccc</option>
+</select> <br>
+
+<input type="submit">
+</form>
+<hr>
+  <h2>Upload a File</h2>
+  <form action="/upload/" method="post" enctype="multipart/form-data">
+    <input type="file" name="filex" required>
+    <button type="submit">Upload</button>
+  </form>
+
+<hr/>
+<p>超連結</p>
+<!-- hyper link -->
+<a href="01.js.html">simple link</a> <br>
+<a href="01.js.html?a=5&b=okok">link with parameter</a> <br>
+<a href="01.js.html" target="_blank">link with a target window</a><br>
+</body>
+</html>

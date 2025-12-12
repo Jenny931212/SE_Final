@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <title>修改委託案</title>
+  <style>
+    body {
+      font-family: "Noto Sans TC", Arial, sans-serif;
+      background-color: #f5faff;
+      color: #333;
+      margin: 0;
+      padding: 40px;
+      line-height: 1.6;
+    }
+
+    h1 {
+      text-align: center;
+      color: #1d5ea8;
+      font-weight: 800;
+      letter-spacing: 1px;
+      margin-bottom: 30px;
+    }
+
+    form {
+      width: 420px;
+      margin: 0 auto;
+      background: #fff;
+      padding: 35px 40px;
+      border-radius: 12px;
+      box-shadow: 0 6px 15px rgba(0,0,0,0.08);
+      border-top: 4px solid #5ca8ff;
+    }
+
+    label {
+      display: block;
+      margin-top: 15px;
+      font-weight: 600;
+      color: #245a9b;
+    }
+
+    input, textarea {
+      width: 100%;
+      padding: 10px;
+      margin-top: 6px;
+      border: 1.5px solid #d7e6ff;
+      border-radius: 8px;
+      background-color: #f8fbff;
+      font-size: 15px;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    input:focus, textarea:focus {
+      border-color: #5ca8ff;
+      outline: none;
+      box-shadow: 0 0 5px rgba(92,168,255,0.4);
+      background-color: #fff;
+    }
+
+    button {
+      width: 100%;
+      margin-top: 25px;
+      padding: 12px;
+      background-color: #5ca8ff;
+      border: none;
+      border-radius: 8px;
+      color: #fff;
+      font-weight: 700;
+      font-size: 15px;
+      cursor: pointer;
+      transition: all 0.25s ease;
+    }
+
+    button:hover {
+      background-color: #3f91eb;
+      box-shadow: 0 4px 10px rgba(63,145,235,0.3);
+    }
+
+    p {
+      text-align: center;
+      margin-top: 20px;
+    }
+
+    a {
+      text-decoration: none;
+      color: #2b6cb0;
+      font-weight: 600;
+      transition: color 0.2s ease;
+    }
+
+    a:hover {
+      text-decoration: underline;
+      color: #1a5da0;
+    }
+  </style>
+</head>
+<body>
+  <h1>修改委託案</h1>
+  <form method="post" action="/jobs/update/{{ job.id }}">
+    <label>標題：</label>
+    <input type="text" name="title" value="{{ job.title }}" required>
+
+    <label>描述：</label>
+    <textarea name="description" rows="4">{{ job.description }}</textarea>
+
+    <label>預算：</label>
+    <input type="number" name="budget" value="{{ job.budget }}" required>
+
+    <button type="submit">更新</button>
+  </form>
+
+  <p>
+    <a href="/jobs/">返回列表</a>
+  </p>
+</body>
+</html>
