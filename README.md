@@ -71,11 +71,4 @@
 
 - Python 3.10+
 - PostgreSQL
-- 套件（建議使用虛擬環境）：
-  ```bash
-  pip install fastapi uvicorn psycopg[binary] jinja2 python-multipart passlib
-
-
-
-
-
+- FastAPI
