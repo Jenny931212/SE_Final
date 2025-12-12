@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>專案詳情</h2>
+<p><b>標題：</b> {{ project.title }}<br>
+<b>狀態：</b>
+<span class="badge {% if project.status == 'reject' %}badge_reject{% endif %}">
+  {{ project.status }}
+</span><br>
+<b>接案人：</b> {{ project.contractor_username if project.contractor_username else "尚未指派" }}</p>
+<p><b>需求描述：</b><br>{{ project.description|replace('\n','<br>')|safe }}</p>
+
+<p>
+  {% if project.status in ["open","in_progress","reject"] %}
+    <a class="btn secondary" href="/projects/{{ project.id }}/edit">編輯專案</a>
+  {% endif %}
+</p>
+
+{% if project.status == "open" %}
+<h3 style="position:relative; top:10px">已提出意願的接案人</h3>
+{% if proposals|length == 0 %}
+<p class="muted" style="position:relative; top:5px">還未有接案人提出意願~</p>
+{% else %}
+<table>
+  <tr><th>接案人</th><th>報價</th><th>訊息</th><th>時間</th><th>評價</th><th>操作</th></tr>
+  {% for pr in proposals %}
+  <tr>
+    <td>{{ pr.contractor_username }}</td>
+    <td>${{ '%.2f'|format(pr.price) }}</td>
+    <td>{{ pr.message }}</td>
+    <td>{{ pr.created_at.strftime("%Y-%m-%d %H:%M") }}</td>
+	<td>
+      <a class="btn secondary"
+         href="/ratings/contractor/{{ pr.contractor_id }}">
+        查看接案人評價
+      </a>
+    </td>
+    <td>
+      {% if not pr.accepted %}
+      <form method="post" action="/projects/{{ project.id }}/select">
+        <input type="hidden" name="proposal_id" value="{{ pr.id }}">
+        <button type="submit">選擇此接案人</button>
+      </form>
+      {% else %}
+      <span class="badge">已選擇</span>
+      {% endif %}
+    </td>
+  </tr>
+  {% endfor %}
+</table>
+{% endif %}
+{% endif %}
+
+{% if project.status in ["submitted","in_progress"] and project.contractor_username %}
+<h3>結案檔案</h3>
+<ul>
+  {% for f in closures %}
+    <li>
+		{{ f.filename }}（{{ f.created_at.strftime("%Y-%m-%d %H:%M") }}）
+		<a class="btn secondary" href="/files/{{ f.id }}" style="padding:10px 14px;">下載</a>
+	</li>
+  {% endfor %}
+</ul>
+
+{% if project.status == "submitted" %}
+<form method="post" action="/projects/{{ project.id }}/decision">
+  <button name="decision" value="accept" type="submit">接受結案</button>
+  <button name="decision" value="reject" class="btn secondary" type="submit">退回修改</button>
+</form>
+{% endif %}
+{% endif %}
+
+{% if project.status in ["closed"] and project.contractor_username %}
+<h3>結案檔案</h3>
+<ul>
+  {% for f in closures %}
+    <li>
+		{{ f.filename }}（{{ f.created_at.strftime("%Y-%m-%d %H:%M") }}）
+		<a class="btn secondary" href="/files/{{ f.id }}" style="padding:10px 14px;">下載</a>
+	</li>
+  {% endfor %}
+</ul>
+
+<hr/>
+
+  <h3>評價接案人</h3>
+
+  {% if not has_rated_contractor %}
+    <p>
+      <a class="btn" href="/projects/{{ project.id }}/rate?target=contractor">
+        我要評價此接案人
+      </a>
+    </p>
+  {% else %}
+    <p class="muted">您已經評價過此接案人。</p>
+  {% endif %}
+
+  <p>
+    <a class="btn secondary" href="/ratings/contractor/{{ project.contractor_id }}">
+      查看接案人歷史評價
+    </a>
+  </p>
+{% endif %}
+
+{% endblock %}

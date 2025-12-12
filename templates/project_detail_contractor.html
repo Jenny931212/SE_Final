@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>專案詳情</h2>
+<p><b>標題：</b> {{ project.title }}<br>
+<b>狀態：</b>
+<span class="badge {% if project.status == 'reject' %}badge_reject{% endif %}">
+  {{ project.status }}
+</span><br>
+<b>委託人：</b> {{ project.client_username }}
+<a class="btn secondary" href="/ratings/client/{{ project.client_id }}"
+     style="margin-left:8px;">
+    查看委託人評價
+</a>
+</p>
+<p><b>需求描述：</b><br>{{ project.description|replace('\n','<br>')|safe }}</p>
+
+{% if project.status == "open" %}
+<p class="muted">此案件正在徵人中~~~<br/>您可在「瀏覽公開案件」頁面(上一頁)提出承包意願!!!</p>
+<a class="btn secondary" href="/browse" >返回</a>
+{% endif %}
+
+{% if project.contractor_id and user.id == project.contractor_id and project.status in ["in_progress","submitted","reject"] %}
+<p><a class="btn" href="/projects/{{ project.id }}/upload">上傳結案檔案</a></p>
+<h3>已上傳的檔案</h3>
+<ul>
+  {% for f in closures %}
+    <li>
+		{{ f.filename }}（{{ f.created_at.strftime("%Y-%m-%d %H:%M") }}）
+		<a class="btn_download" href="/files/{{ f.id }}" >下載</a>
+		{% if f.contractor_id == user.id and project.status != 'closed' %}
+          <form method="post" action="/files/{{ f.id }}/delete" style="display:inline;">
+            <button class="btn secondary"
+                    type="submit"
+                    onclick="return confirm('確定要刪除這個檔案嗎？');">
+              刪除
+            </button>
+          </form>
+        {% endif %}
+	</li>
+  {% endfor %}
+</ul>
+{% endif %}
+
+{% if project.contractor_id and user.id == project.contractor_id and project.status in ["closed"] %}
+<h3>已上傳的檔案</h3>
+<ul>
+  {% for f in closures %}
+    <li>
+		{{ f.filename }}（{{ f.created_at.strftime("%Y-%m-%d %H:%M") }}）
+		<a class="btn_download" href="/files/{{ f.id }}" >下載</a>
+	</li>
+  {% endfor %}
+</ul>
+<hr/>
+<h3>評價委託人</h3>
+
+  {% if not has_rated_client %}
+    <p>
+      <a class="btn" href="/projects/{{ project.id }}/rate?target=client">
+        我要評價此委託人
+      </a>
+    </p>
+  {% else %}
+    <p class="muted">您已經評價過此委託人。</p>
+  {% endif %}
+{% endif %}
+{% endblock %}

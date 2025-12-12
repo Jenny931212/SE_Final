@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>歡迎來到工作委託平台</h1>
+
+<h2>平台使用說明</h2>
+此平台提供兩個角色 您可以選擇作為:<br/>
+<p>
+1. <b>委託人</b> : 根據需求進行提案<br/>
+	<ul>
+	<li>委託人可做動作：建立/修改待委託專案、選擇接案對象、結案管理（退件/接受）。</li>
+	</ul>
+2. <b>接案人</b> : 可查看所有案件並接下<br/>
+	<ul>
+	<li>接案人可做動作：查詢/瀏覽委託專案、提出承包意願（同時報價）、上傳結案檔案。</li>
+	</ul>
+</p>
+
+<h2>案件狀態說明</h2>
+<table style="border-collapse:collapse; width:100%; max-width:700px; border:1px solid #C8D7CF;">
+  <thead style="background-color:#E9F1ED;">
+    <tr>
+      <th style="padding:8px; border:1px solid #C8D7CF;">狀態</th>
+      <th style="padding:8px; border:1px solid #C8D7CF;">說明</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="padding:8px; border:1px solid #C8D7CF;"><span class="badge">open</span></td>
+      <td style="padding:8px; border:1px solid #C8D7CF;">公開徵人中的案件</td>
+    </tr>
+    <tr>
+      <td style="padding:8px; border:1px solid #C8D7CF;"><span class="badge">in_progress</span></td>
+      <td style="padding:8px; border:1px solid #C8D7CF;">委託人完成接案人的選擇，接案人就可以去工作啦~!</td>
+    </tr>
+    <tr>
+      <td style="padding:8px; border:1px solid #C8D7CF;"><span class="badge">submitted</span></td>
+      <td style="padding:8px; border:1px solid #C8D7CF;">接案人已上傳結案檔，等待委託人確認</td>
+    </tr>
+    <tr>
+      <td style="padding:8px; border:1px solid #C8D7CF;"><span class="badge">closed</span></td>
+      <td style="padding:8px; border:1px solid #C8D7CF;">委託人覺得沒問題，案件結案</td>
+    </tr>
+    <tr>
+      <td style="padding:8px; border:1px solid #C8D7CF;"><span class="badge badge_reject">reject</span></td>
+      <td style="padding:8px; border:1px solid #C8D7CF;">委託人退件，需修改重新上傳</td>
+    </tr>
+  </tbody>
+</table>
+
+<p><a class="btn" href="/dashboard">開始提案 or 接案</a></p>
+{% endblock %}

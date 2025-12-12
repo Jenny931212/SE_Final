@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>提出接案意願</h2>
+<p><b>案件名稱：</b> {{ project.title }}</p>
+<form method="post" action="/projects/{{ project.id }}/propose">
+  <label>提案內容（預計做法、時程、聯絡電話等）</label>
+  <textarea name="message" rows="6" required></textarea>
+  <label>報價$$$</label>
+  <input type="number" name="price" step="1" min="0" required>
+  <button type="submit" style="position:relative; top:10px">送出</button>
+  <a class="btn secondary" href="/browse" style="position:relative; top:10px">返回</a>
+</form>
+{% endblock %}

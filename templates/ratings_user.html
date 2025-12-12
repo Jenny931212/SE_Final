@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h2>{{ role_label }}評價：{{ target.username }}</h2>
+
+{% if not stats or stats.cnt == 0 %}
+  <p class="muted">目前還沒有任何評價。</p>
+{% else %}
+  <p>共有 {{ stats.cnt }} 筆評價記錄。</p>
+
+  <table>
+    <tr>
+      <th>評分項目</th>
+      <th>平均分數（1~5）</th>
+    </tr>
+    <tr>
+      <td>{{ dim_labels[0] }}</td>
+      <td>{{ "%.1f"|format(stats.avg1 or 0) }}</td>
+    </tr>
+    <tr>
+      <td>{{ dim_labels[1] }}</td>
+      <td>{{ "%.1f"|format(stats.avg2 or 0) }}</td>
+    </tr>
+    <tr>
+      <td>{{ dim_labels[2] }}</td>
+      <td>{{ "%.1f"|format(stats.avg3 or 0) }}</td>
+    </tr>
+  </table>
+
+  <h3 style="margin-top:20px;">所有質性評論</h3>
+  <ul>
+    {% for r in items %}
+      <li style="margin-bottom:12px;">
+        <b>來自：</b> {{ r.rater_username }}  
+        （案件：{{ r.project_title }}，
+        時間：{{ r.created_at.strftime("%Y-%m-%d %H:%M") }}）<br>
+        <b>分數：</b>
+        {{ dim_labels[0] }} {{ r.score_1 }}，
+        {{ dim_labels[1] }} {{ r.score_2 }}，
+        {{ dim_labels[2] }} {{ r.score_3 }}<br>
+        <b>評論：</b> {{ r.comment or "（無留言）" }}
+      </li>
+    {% endfor %}
+  </ul>
+{% endif %}
+
+<p>
+  <a href="javascript:history.back()" class="btn secondary">返回上一頁</a>
+</p>
+
+{% endblock %}

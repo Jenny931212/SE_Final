@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>編輯專案</h2>
+<form method="post" action="/projects/{{ project.id }}/edit">
+  <label>標題</label>
+  <input name="title" required maxlength="100" value="{{ project.title }}">
+  <label>需求描述</label>
+  <textarea name="description" rows="8" required>{{ project.description }}</textarea>
+  <button type="submit">儲存</button>
+  <a class="btn secondary" href="/projects/{{ project.id }}">返回</a>
+</form>
+{% endblock %}
