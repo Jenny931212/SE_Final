@@ -1,0 +1,408 @@
+<html><head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<script type="text/javascript" src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+</head>
+
+<body >
+<a href="/logout">Logout</a>
+<P>
+	<a href="/">Back Home</a>
+</P>
+{% raw %}
+<div id="main">
+	<h1>我的委託</h1>
+	<hr/>
+	<div v-for="item in dat" :key="item.id">
+		
+		<div v-if="item.username === currentUser">
+		<div v-if="item.finish == false">
+			
+			<p>
+				案件編號:{{ item.id }}
+			</p>
+			<p>
+				委託內容:{{ item.content }}
+			</p>
+
+			<div v-if="item.winner">
+				<p>
+					接案人:{{ item.winner }}
+				</p>
+				<p>
+					接案價格:{{ item.winnerprice }}
+				</p>
+			</div>
+			
+			<div v-else>
+				<p>
+					<em>(尚未決標)</em>
+				</p>
+			</div>
+			<div v-if="item.filename">
+				<a :href="'/uploads/' + item.filename" :download="item.filename">
+					download {{ item.filename }}
+				</a>
+			</div>
+            <input type='button' @click="methods.readPost(item.id)" value="檢視案件詳情/Issue"> 
+			<input type='button'  @click="methods.changeFinish(item.id)" value="接受">
+			<input type='button'  @click="methods.delCases(item.id)" value="退件">
+			<hr/>
+		</div>	
+		</div>
+	</div>
+	<div>
+	<h1>歷史委託</h1>
+	<hr/>
+    <div v-for="item in dat" :key="item.id"> 
+		<div v-if="item.username === currentUser">
+		<div v-if="item.finish == true">
+	    	<p>
+			案件編號:{{item.id}}
+			</p>
+			<p>
+			委託內容:{{item.content}}
+			</p>
+			<p>
+			接案人:{{ item.winner }}
+			</p>
+			<p>
+			接案價格:{{ item.winnerprice }}
+			</p>
+	    <hr/>
+		</div>
+		</div>
+	</div>
+</div>
+
+<div v-if="rec.id">
+    <h2>案件詳情: {{ rec.id }} / 問題追蹤</h2>
+    <p>
+        目前狀態: {{ rec.finish ? '已最終結案' : '處理中' }}
+        <span v-if="rec.winner"> (接案人: {{ rec.winner }})</span>
+    </p>
+    <hr/>
+    
+    <div v-if="rec.username === currentUser && rec.finish === false">
+        <button @click="methods.finalizePost(rec.id)">最終結案 (將自動關閉所有未結 Issue)</button>
+    </div>
+    <div v-if="rec.finish === true">
+        <p><strong>此案件已最終結案。</strong></p>
+    </div>
+    
+    <div v-if="rec.username === currentUser && rec.finish === false">
+        <h3>提出新問題</h3>
+        <input type="text" v-model="newIssueTitle" placeholder="標題" />
+        <textarea v-model="newIssueDescription" placeholder="詳細描述..." rows="3"></textarea><br>
+        <button @click="methods.createIssue">建立新 Issue</button>
+        <hr/>
+    </div>
+
+    <h3>Issue 列表 (共 {{ issuesList.length }} 個)</h3>
+    <div v-for="issue in issuesList" :key="issue.id" style="border: 1px solid #ccc; margin-bottom: 10px; padding: 10px;">
+        <p>
+            Issue ID: {{ issue.id }}| 
+            狀態:  <span :style="{ color: issue.status === 'open' ? 'red' : 'green' }">{{ issue.status }}</span> | 
+            開啟者: {{ issue.opener_user }} | 
+            <small>{{ issue.created_at }}</small>
+        </p>
+        <p>
+            {{ issue.title }}
+        </p>
+        
+        <div v-if="issue.status === 'open' && rec.username === currentUser">
+            <button @click="methods.closeIssue(issue.id)">關閉 Issue</button>
+        </div>
+        
+        <button @click="selectedIssueId === issue.id ? selectedIssueId = null : methods.loadComments(issue.id)">
+            {{ selectedIssueId === issue.id ? '隱藏留言' : '查看留言' }}
+        </button>
+        
+        <div v-if="selectedIssueId === issue.id">
+            <h4>留言 (Comments)</h4>
+            <div v-for="comment in commentsList" :key="comment.id" style="background: #f0f0f0; margin-top: 5px; padding: 5px;">
+                <p>
+                    {{ comment.comment_user }}: {{ comment.content }}
+                    <small>({{ comment.created_at }})</small>
+                </p>
+            </div>
+            
+            <div v-if="issue.status === 'open'">
+                <textarea v-model="newCommentContent" placeholder="新增留言..." rows="2"></textarea><br>
+                <button @click="methods.addComment">送出留言</button>
+            </div>
+            <div v-else>
+                 <p><em>(此 Issue 已關閉，無法新增留言)</em></p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endraw %}
+<script type="text/javascript">
+const { createApp, ref, reactive, onMounted } = Vue;
+
+app=createApp({
+  setup() {
+	const newContent = ref('');
+	const newPrice = ref('');
+	const role=ref('admin');
+	const rec=ref({});
+	const dat=ref([]);
+	const selectedFile = ref(null);
+	const applies=ref([]);
+	const currentUser = ref('');
+	
+    // === Issues Tracker 新增狀態 (必備!) ===
+    const issuesList = ref([]);
+    const commentsList = ref([]);
+    const newIssueTitle = ref('');
+    const newIssueDescription = ref('');
+    const newCommentContent = ref('');
+    const selectedIssueId = ref(null);
+    // ======================================
+
+	const methods={
+		loadList: () => {
+		  // This runs after the component is mounted to the DOM
+			let url="/getPostsJson";
+			//let that=this;
+			fetch(url,{
+				method: 'GET'
+			})
+			.then(function(res){return res.json(); }) //取得傳回值，轉為文字
+			.then(function(json){
+			console.log(json);
+				dat.value=json;
+			})
+			
+		},
+		loadUser: () => {
+            fetch('/getUser')
+                .then(res => res.json())
+                .then(data => {
+                    if (data.username) {
+                        currentUser.value = data.username;
+                        console.log('Current user:', data.username);
+                    } else {
+                        console.log('User not logged in.');
+                    }
+                });
+        },
+		loadApplies: (id) => {
+		    let url="/readApplyJson/"+id;
+		    fetch(url,{
+		        method: 'GET'
+		    })
+		    .then(function(res){return res.json(); })
+		    .then(function(json){
+		        applies.value=json; 
+                console.log('Applies List:', json);
+		    })
+		},
+
+		readPost: (id) => {
+		  // This runs after the component is mounted to the DOM
+			let url="/readPostJson/"+id;
+			//let that=this;
+			fetch(url,{
+				method: 'GET'
+			})
+			.then(function(res){return res.json(); }) //取得傳回值，轉為文字
+			.then(function(json){
+			console.log(json);
+				rec.value=json;
+				applies.value = [];
+				methods.loadApplies(id);
+                methods.loadIssues(id); // <<< 載入 Issues
+			})
+			
+		},	
+		// ... (其他既有的 addPost, addPrice, delPost, delCases, changeFinish 等方法保持不變)
+        
+        // **********************************************
+        // === Issues Tracker 新增邏輯 (必備!) ===
+        // **********************************************
+        loadIssues: (postId) => {
+            let url = `/api/issues/get/${postId}`;
+            fetch(url)
+                .then(res => res.json())
+                .then(json => {
+                    issuesList.value = json;
+                    commentsList.value = []; 
+                    selectedIssueId.value = null; 
+                })
+                .catch(error => console.error('Error loading issues:', error));
+        },
+        
+        loadComments: (issueId) => {
+            // 切換選中的 Issue ID，如果點擊同一個則隱藏
+            if (selectedIssueId.value === issueId) {
+                selectedIssueId.value = null;
+                commentsList.value = [];
+                return;
+            }
+            selectedIssueId.value = issueId;
+            
+            let url = `/api/issues/comments/${issueId}`;
+            fetch(url)
+                .then(res => res.json())
+                .then(json => {
+                    commentsList.value = json;
+                })
+                .catch(error => console.error('Error loading comments:', error));
+        },
+
+        createIssue: () => {
+            if (!newIssueTitle.value || !newIssueDescription.value) {
+                alert("標題和描述不能為空。");
+                return;
+            }
+            const formData = new FormData();
+            formData.append('post_id', rec.value.id);
+            formData.append('title', newIssueTitle.value);
+            formData.append('description', newIssueDescription.value);
+
+            fetch('/api/issues/create', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    newIssueTitle.value = '';
+                    newIssueDescription.value = '';
+                    methods.loadIssues(rec.value.id); // 重新載入 Issues
+                } else {
+                    alert(`建立 Issue 失敗: ${data.detail}`);
+                }
+            })
+            .catch(error => console.error('Error creating issue:', error));
+        },
+
+        addComment: () => {
+            if (!selectedIssueId.value || !newCommentContent.value) return;
+
+            const formData = new FormData();
+            formData.append('issue_id', selectedIssueId.value);
+            formData.append('content', newCommentContent.value);
+
+            fetch('/api/issues/comment/add', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    newCommentContent.value = '';
+                    methods.loadComments(selectedIssueId.value); // 重新載入留言
+                } else {
+                    alert(`新增留言失敗: ${data.detail}`);
+                }
+            })
+            .catch(error => console.error('Error adding comment:', error));
+        },
+        
+        closeIssue: (issueId) => {
+            if (!confirm('確認要關閉此 Issue 嗎？')) return;
+            
+            fetch(`/api/issues/close/${issueId}`, {
+                method: 'POST',
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    methods.loadIssues(rec.value.id); // 重新載入 Issues
+                } else {
+                    alert(`關閉 Issue 失敗: ${data.detail}`);
+                }
+            })
+            .catch(error => console.error('Error closing issue:', error));
+        },
+
+        /**
+         * 修改後的 finalizePost 函數：
+         * 1. 檢查是否有未關閉的 Issue。
+         * 2. 如果有，彈出警告並確認是否強制結案。
+         * 3. 發送請求到後端，後端應負責在結案前，將所有 open 的 Issue 狀態設為 close。
+         */
+        finalizePost: (postId) => {
+            const openIssues = issuesList.value.filter(issue => issue.status === 'open');
+            
+            let confirmationMessage = '確認要將此案件最終結案嗎？';
+            
+            if (openIssues.length > 0) {
+                confirmationMessage = `偵測到仍有 ${openIssues.length} 個未關閉的 Issue，最終結案將自動關閉所有 Issues。確認要繼續嗎？`;
+            } else {
+                confirmationMessage = '確認所有 Issues 均已處理完畢，並將此案件最終結案嗎？';
+            }
+            
+            if (!confirm(confirmationMessage)) return;
+
+            // 執行結案動作，後端應處理 Issue 的自動關閉
+            fetch(`/api/posts/finalize/${postId}`, {
+                method: 'POST',
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('案件已最終結案！所有未結 Issues 已自動關閉。');
+                    methods.readPost(postId); // 更新案件詳情 (包含 Issues 狀態)
+                    methods.loadList(); // 更新列表狀態
+                } else {
+                    alert(`最終結案失敗: ${data.detail}`);
+                }
+            })
+            .catch(error => console.error('Error finalizing post:', error));
+        },
+        // ==============================================
+
+
+        // (其他方法)
+        addPost: (content) => { /* ... */ },
+		addPrice: (id,price) => { /* ... */ },
+		addWinner: (id, item) => { /* ... */ },
+		delPost: (id) => { /* ... */ },
+		delCases: (id) => {
+			//let that=this;
+			const URL="/delCases/" +id;
+			fetch(URL)
+			.then(response => response.text())
+			.then(data => {
+				console.log('Server response:', data);
+				methods.loadList();
+			})
+			.catch(error => {
+				console.error('Error:', error);
+			});
+		},
+		changeFinish: (id) => {
+			//let that=this;
+			const URL="/changeFinish/" +id;
+			fetch(URL)
+			.then(response => response.text())
+			.then(data => {
+				console.log('Server response:', data);
+				methods.loadList();
+			})
+			.catch(error => {
+				console.error('Error:', error);
+			});
+		},
+	}; //end of methods
+
+	onMounted(() => {
+	console.log('App mounted!');
+		methods.loadList();
+		methods.loadUser();
+		console.log('App mounted! loadlist');
+	});
+
+    return { 
+        currentUser, newContent, newPrice, rec, dat, role, selectedFile, methods, applies,
+        // Issues Tracker 相關狀態
+        issuesList, commentsList, newIssueTitle, newIssueDescription, newCommentContent, selectedIssueId
+    };
+  }
+}).mount('#main');
+</script>
+
+</body></html>

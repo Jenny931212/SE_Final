@@ -28,4 +28,3 @@ async def getDB():
 	async with _pool.connection() as conn:
 		#使用yeild generator傳回連線物件
 		yield conn
-
