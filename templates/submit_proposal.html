@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>提出接案意願</h2>
+<p><b>案件名稱：</b> {{ project.title }}</p>
+<p class="muted">
+  {% if project.bid_deadline %}
+  投標截止：<b>{{ project.bid_deadline }}</b>
+  {% endif %}
+</p>
+<form method="post" action="/projects/{{ project.id }}/propose" enctype="multipart/form-data">
+  <label>提案內容（預計做法、時程、聯絡電話等）</label>
+  <textarea name="message" rows="6" required></textarea>
+  <label>報價$$$</label>
+  <input type="number" name="price" step="1" min="0" required>
+  <label>提案書（PDF）</label>
+    <input type="file" name="proposal_file" accept="application/pdf,.pdf" required>
+    <div class="muted" style="margin-top:6px;">
+      只接受 PDF。系統會自動避免檔名覆蓋並保存檔案。
+    </div>
+  <button type="submit" style="position:relative; top:10px">送出</button>
+  <a class="btn secondary" href="/browse" style="position:relative; top:10px">返回</a>
+</form>
+{% endblock %}

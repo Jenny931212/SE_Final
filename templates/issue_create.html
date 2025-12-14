@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>新增待解決事項</h2>
+
+<form method="post" action="/projects/{{ project.id }}/issues/create">
+  <div class="field">
+    <label>事項名稱</label>
+    <input type="text" name="title" required>
+  </div>
+
+  <div class="field">
+    <label>詳細資訊</label>
+    <textarea name="description" rows="8" required></textarea>
+  </div>
+
+  <button class="btn" type="submit">送出 Issue</button>
+  <a class="btn secondary" href="/projects/{{ project.id }}" style="margin-left:8px;">返回專案</a>
+</form>
+{% endblock %}

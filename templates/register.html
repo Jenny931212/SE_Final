@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>註冊</h2>
+{% if error %}<div class="error">{{ error }}</div>{% endif %}
+<form method="post" action="/register">
+  <label>使用者名稱</label>
+  <input name="username" required>
+  <label>密碼</label>
+  <input name="password" type="password" required>
+  <label>角色</label>
+  <select name="role" required>
+    <option value="client">委託人（發案）</option>
+    <option value="contractor">接案人（接案）</option>
+  </select>
+  <button type="submit" style="position:relative; top:10px;">建立帳號</button>
+</form>
+{% endblock %}

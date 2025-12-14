@@ -1,0 +1,240 @@
+{% extends "base.html" %}
+{% block content %}
+
+{% if notice == "bid_not_ended" %}
+<script>
+  alert("投標尚未截止，暫時不能選擇接案人！");
+</script>
+{% endif %}
+
+<h2>專案詳情</h2>
+<p><b>標題：</b> {{ project.title }}<br>
+<b>狀態：</b>
+<span class="badge {% if project.status == 'reject' %}badge_reject{% endif %}">
+  {{ project.status }}
+</span><br>
+
+<b>投標截止：</b>
+  {% if project.bid_deadline %}
+    {{ project.bid_deadline }}<br>
+  {% else %}
+    <span class="muted">未設定</span>
+  {% endif %}
+
+<b>接案人：</b> {{ project.contractor_username if project.contractor_username else "尚未指派" }}</p>
+<p><b>需求描述：</b><br>{{ project.description|replace('\n','<br>')|safe }}</p>
+
+<p>
+  {% if project.status in ["open","in_progress","reject"] %}
+    <a class="btn secondary" href="/projects/{{ project.id }}/edit">編輯專案</a>
+  {% endif %}
+</p>
+
+{% if project.status == "open" %}
+<h3 style="position:relative; top:10px">已提出意願的接案人</h3>
+{% if proposals|length == 0 %}
+<p class="muted" style="position:relative; top:5px">還未有接案人提出意願~</p>
+{% else %}
+<table>
+  <tr><th>接案人</th><th>報價</th><th>訊息</th><th>時間</th><th>評價</th><th>提案書</th><th>操作</th></tr>
+  {% for pr in proposals %}
+  <tr>
+    <td>{{ pr.contractor_username }}</td>
+    <td>${{ '%.2f'|format(pr.price) }}</td>
+    <td>{{ pr.message }}</td>
+    <td>{{ pr.created_at.strftime("%Y-%m-%d %H:%M") }}</td>
+	<td>
+      <a class="btn secondary"
+         href="/ratings/contractor/{{ pr.contractor_id }}">
+        查看接案人評價
+      </a>
+    </td>
+	<td>
+      {# ★新增：提案書下載按鈕（需要後端提供下載路由 + proposals 欄位） #}
+      {% if pr.proposal_filepath or pr.proposal_filename %}
+        <a class="btn secondary"
+           href="/proposals/{{ pr.id }}/file"
+           style="padding:10px 14px;">
+          下載提案書
+        </a>
+      {% else %}
+        <span class="muted">未提供</span>
+      {% endif %}
+    </td>
+    <td>
+      {% if not pr.accepted %}
+      <form method="post" action="/projects/{{ project.id }}/select">
+        <input type="hidden" name="proposal_id" value="{{ pr.id }}">
+        <button type="submit">選擇此接案人</button>
+      </form>
+      {% else %}
+      <span class="badge">已選擇</span>
+      {% endif %}
+    </td>
+  </tr>
+  {% endfor %}
+</table>
+{% endif %}
+{% endif %}
+
+{% if project.status in ["submitted","in_progress","reject"] and project.contractor_username %}
+<h3>結案檔案</h3>
+  <table style="width:100%; border-collapse:collapse;">
+    <tr>
+      <th style="width:90px;">版本</th>
+      <th>檔名</th>
+      <th style="width:180px;">上傳時間</th>
+      <th style="width:140px;">操作</th>
+    </tr>
+    {% for f in closures %}
+      <tr>
+        <td>
+          <span class="badge">v{{ f.version if f.version is not none else "?" }}</span>
+        </td>
+        <td>{{ f.filename }}</td>
+        <td>{{ f.created_at.strftime("%Y-%m-%d %H:%M") }}</td>
+        <td>
+          <a class="btn secondary" href="/files/{{ f.id }}" style="padding:8px 14px;">下載</a>
+        </td>
+      </tr>
+    {% endfor %}
+  </table>
+
+{% if project.status == "submitted" %}
+<form method="post" action="/projects/{{ project.id }}/decision">
+  <button name="decision" value="accept" type="submit">接受結案</button>
+  <button name="decision" value="reject" class="btn secondary" type="submit">退回修改</button>
+</form>
+{% endif %}
+
+<hr/>
+<h3>待解決事項（Issue）</h3>
+
+{# ★新增：新增待解決事項按鈕（會跳到填表頁） #}
+<p>
+  <a class="btn secondary" href="/projects/{{ project.id }}/issues/new">
+    新增待解決事項
+  </a>
+</p>
+
+{# ★新增：顯示 issues（需要後端 project_detail 也一起撈 issues + comments） #}
+{% if issues is defined and issues|length > 0 %}
+  <div style="display:grid; grid-template-columns:1fr; gap:12px; margin-top:10px;">
+    {% for i in issues %}
+      <div style="border:1px solid #C8D7CF; border-radius:12px; padding:12px; background:#fff;">
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
+          <div>
+            <h4 style="margin:0 0 6px 0;">{{ i.title }}</h4>
+            <div class="muted" style="font-size:14px;">
+              建立時間：{{ i.created_at.strftime("%Y-%m-%d %H:%M") }}
+              ｜發起人：{{ i.opener_name if i.opener_name else "—" }}
+            </div>
+          </div>
+
+          <div style="text-align:right;">
+            {# 狀態 badge：resolved 就顯示已處理 #}
+            {% if i.status == "resolved" %}
+              <span class="badge">已處理</span>
+            {% else %}
+              <span class="badge">待處理</span>
+            {% endif %}
+
+            
+          </div>
+        </div>
+
+        <div style="margin-top:10px;">
+          <b>詳細內容：</b>
+          <div style="margin-top:6px;">{{ i.description|replace('\n','<br>')|safe }}</div>
+        </div>
+
+        <div style="margin-top:12px;">
+          <b>留言：</b>
+          {% set cmts = issue_comments_by_issue[i.id] if issue_comments_by_issue is defined and i.id in issue_comments_by_issue else [] %}
+
+          {% if cmts|length == 0 %}
+            <p class="muted" style="margin:8px 0;">目前尚無留言。</p>
+          {% else %}
+            <div style="margin-top:8px; display:grid; gap:8px;">
+              {% for c in cmts %}
+                <div style="background:#EEF4F1; border:1px solid #C8D7CF; border-radius:10px; padding:10px;">
+                  <div style="font-size:14px; color:#2F3E35;">
+                    <b>{{ c.author_name }}</b>
+                    <span class="muted">｜{{ c.created_at.strftime("%Y-%m-%d %H:%M") }}</span>
+                  </div>
+                  <div style="margin-top:6px;">{{ c.content|replace('\n','<br>')|safe }}</div>
+                </div>
+              {% endfor %}
+            </div>
+          {% endif %}
+
+          {# ★新增：未關閉才可留言（前端擋） #}
+          {% if i.status != "resolved" %}
+            <form method="post" action="/issues/{{ i.id }}/comment" style="margin-top:10px;">
+              <textarea name="content" rows="3" placeholder="留下你的留言..." required></textarea>
+              <button type="submit" style="padding:8px 10px; position:relative; top:10px">送出留言</button>
+			  {# ★新增：關閉按鈕（委託人可關閉） #}
+			  {% if i.status != "resolved" %}
+              <form method="post" action="/issues/{{ i.id }}/resolve" style="margin:6px 0 0 0;">
+                <button type="submit" class="btn secondary" style="padding:8px 10px; position:relative; top:10px">標記為已處理</button>
+              </form>
+              {% endif %}
+            </form>
+          {% else %}
+            <p class="muted" style="margin-top:10px;">此 Issue 已處理完成，無法再留言。</p>
+          {% endif %}
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+{% else %}
+  <p class="muted">目前沒有待解決事項。</p>
+{% endif %}
+
+{% endif %}
+
+{% if project.status in ["closed"] and project.contractor_username %}
+<h3>結案檔案</h3>
+  <table style="width:100%; border-collapse:collapse;">
+    <tr>
+      <th style="width:90px;">版本</th>
+      <th>檔名</th>
+      <th style="width:180px;">上傳時間</th>
+      <th style="width:140px;">操作</th>
+    </tr>
+    {% for f in closures %}
+      <tr>
+        <td>
+          <span class="badge">v{{ f.version if f.version is not none else "?" }}</span>
+        </td>
+        <td>{{ f.filename }}</td>
+        <td>{{ f.created_at.strftime("%Y-%m-%d %H:%M") }}</td>
+        <td>
+          <a class="btn secondary" href="/files/{{ f.id }}" style="padding:8px 14px;">下載</a>
+        </td>
+      </tr>
+    {% endfor %}
+  </table>
+
+<hr/>
+
+  <h3>評價接案人</h3>
+
+  {% if not has_rated_contractor %}
+    <p>
+      <a class="btn" href="/projects/{{ project.id }}/rate?target=contractor">
+        我要評價此接案人
+      </a>
+    </p>
+  {% else %}
+    <p class="muted">您已經評價過此接案人。</p>
+  {% endif %}
+
+  <p>
+    <a class="btn secondary" href="/ratings/contractor/{{ project.contractor_id }}">
+      查看接案人歷史評價
+    </a>
+  </p>
+{% endif %}
+
+{% endblock %}
