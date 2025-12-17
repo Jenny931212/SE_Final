@@ -1076,30 +1076,32 @@ async def issue_resolve(issue_id: int, request: Request, conn=Depends(getDB)):
         return RedirectResponse("/login")
 
     async with conn.cursor(row_factory=dict_row) as cur:
-        # ★(4) 權限檢查：先確認 issue 存在，且必須是該案的委託人才能關閉
+        # ★(4) 權限檢查
         await cur.execute("""
-            SELECT p.client_id
+            SELECT p.client_id, i.project_id 
             FROM issues i
             JOIN projects p ON p.id = i.project_id
             WHERE i.id=%s;
         """, (issue_id,))
         row = await cur.fetchone()
+        
         if not row:
             raise HTTPException(404, "找不到 Issue")
 
         if user["id"] != row["client_id"]:
             raise HTTPException(403, "只有此案件的委託人可以關閉 Issue")
 
-        await cur.execute("""
-            UPDATE issues
-            SET status='resolved', resolved_at=NOW()
-            WHERE id=%s;
-        """, (issue_id,))
+        # ===========【請加入以下這段程式碼】===========
+        # 更新資料庫狀態
+        await cur.execute("UPDATE issues SET status='resolved' WHERE id=%s", (issue_id,))
         await conn.commit()
+        # ============================================
 
-    return RedirectResponse(request.headers.get("referer", "/dashboard"), status_code=302)
-
+    # 導回原本的專案頁面
+    return RedirectResponse(f"/projects/{row['project_id']}", status_code=302)
 
 @app.on_event("shutdown")
 async def _shutdown():
+
     await close_pool()
+
