@@ -1068,7 +1068,6 @@ async def issue_comment(
     return RedirectResponse(request.headers.get("referer", f"/projects/{row['project_id']}"), status_code=302)
 
 
-# ... (約第 250 行左右)
 # 關閉 issue（只有此案件委託人可關）
 @app.post("/issues/{issue_id}/resolve")
 async def issue_resolve(issue_id: int, request: Request, conn=Depends(getDB)):
@@ -1105,3 +1104,4 @@ async def issue_resolve(issue_id: int, request: Request, conn=Depends(getDB)):
 async def _shutdown():
 
     await close_pool()
+
