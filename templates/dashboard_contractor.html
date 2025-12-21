@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>接案人首頁</h2>
+
+{% if notice %}
+<div style="background:#E8F6EF; border:1px solid #A6D9C7; color:#2F3E35; padding:10px 12px; border-radius:10px; margin:12px 0;">
+  {{ notice }}
+</div>
+{% endif %}
+
+<p>
+  <a class="btn" href="/browse">瀏覽公開案件（目前 {{ open_count }} 筆）</a>
+</p>
+
+<h3>我承作的專案列表</h3>
+<table>
+  <tr><th>#</th><th>標題</th><th>狀態</th><th>委託人</th><th>建立時間</th><th>操作</th></tr>
+  {% for p in projects %}
+  <tr>
+    <td>{{ loop.index }}</td>
+    <td>{{ p.title }}</td>
+    <td><span class="badge {% if p.status == 'reject' %}badge_reject{% endif %}">{{ p.status }}</span></td>
+    <td>{{ p.client_username }}</td>
+    <td>{{ p.created_at.strftime("%Y-%m-%d %H:%M") if p.created_at else "" }}</td>
+	<td><a class="btn" href="/projects/{{ p.id }}">查看</a></td>
+  </tr>
+  {% endfor %}
+</table>
+{% endblock %}

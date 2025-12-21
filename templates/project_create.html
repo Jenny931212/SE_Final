@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>建立新專案</h2>
+<form method="post" action="/projects/create">
+  <label>標題</label>
+  <input name="title" required maxlength="100">
+  <label>需求描述(請詳細的描述您的需求，如不介意也可附上心理價、聯絡方式等)</label>
+  <textarea name="description" rows="8" required></textarea>
+  <label>投標截止期限</label>
+    <input type="datetime-local" name="bid_deadline" required>
+  <button type="submit" style="position:relative; top:10px" >建立</button>
+  <a class="btn secondary" href="/dashboard" style="position:relative; top:10px" >取消</a>
+</form>
+{% endblock %}

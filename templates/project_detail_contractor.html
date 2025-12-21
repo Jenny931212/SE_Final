@@ -1,0 +1,289 @@
+{% extends "base.html" %}
+{% block content %}
+
+<style>
+  /* ===== Issue UI：讓每一筆 Issue 都像卡片 ===== */
+  .issue-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(280px,1fr));
+    gap:14px;
+    margin-top:12px;
+  }
+  .issue-card{
+    border:1px solid #DDE7E2;
+    border-radius:14px;
+    background:#fff;
+    padding:14px;
+    box-shadow: 0 6px 18px rgba(0,0,0,.06);
+    transition: transform .12s ease, box-shadow .12s ease;
+  }
+  .issue-card:hover{
+    transform: translateY(-2px);
+    box-shadow: 0 10px 26px rgba(0,0,0,.10);
+  }
+  .issue-head{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:10px;
+  }
+  .issue-title{
+    font-weight:800;
+    font-size:16px;
+    line-height:1.2;
+  }
+  .issue-desc{
+    margin-top:8px;
+    padding:10px;
+    border-radius:12px;
+    background:#F7FBF8;
+    border:1px solid #E2EFE7;
+  }
+
+  /* 留言區塊更像「內嵌卡片」 */
+  .issue-thread{
+    margin-top:12px;
+    padding:12px;
+    border-radius:12px;
+    border:1px solid #E6ECE8;
+    background:#F9FBFA;
+  }
+  .issue-thread-title{
+    font-weight:800;
+    margin-bottom:8px;
+  }
+  .comment-bubble{
+    padding:10px 12px;
+    border:1px solid #C8D7CF;
+    border-radius:12px;
+    background:#fff;
+  }
+  .comment-meta{
+    display:flex;
+    justify-content:space-between;
+    gap:10px;
+    align-items:center;
+  }
+  .comment-author{
+    font-weight:800;
+  }
+
+  /* 回覆表單也做成一塊 */
+  .issue-reply{
+    margin-top:12px;
+    padding-top:10px;
+    border-top:1px dashed #DDE7E2;
+  }
+  .issue-reply textarea{
+    width:100%;
+    box-sizing:border-box;
+    border:1px solid #DDE7E2;
+    border-radius:12px;
+    padding:10px;
+    background:#fff;
+  }
+  
+  .badge_ok{
+	background:gray;        /* 淡綠底 */
+	border:1px solid #7FBF9A;
+	color:black;
+  }
+
+</style>
+
+
+<h2>專案詳情</h2>
+<p><b>標題：</b> {{ project.title }}<br>
+<b>狀態：</b>
+<span class="badge {% if project.status == 'reject' %}badge_reject{% endif %}">
+  {{ project.status }}
+</span><br>
+
+<b>投標截止：</b>
+  {% if project.bid_deadline %}
+    {{ project.bid_deadline }}<br>
+  {% else %}
+    <span class="muted">未設定</span>
+  {% endif %}
+
+<b>委託人：</b> {{ project.client_username }}<br/>
+<a class="btn secondary" href="/ratings/client/{{ project.client_id }}"
+     style="padding:6px 8px; position:relative; top:10px">
+    查看委託人評價
+</a>
+</p>
+<p><b>需求描述：</b><br>{{ project.description|replace('\n','<br>')|safe }}</p>
+
+{% if project.status == "open" %}
+<p class="muted">此案件正在徵人中~~~<br/>您可在「瀏覽公開案件」頁面(上一頁)提出承包意願!!!</p>
+<a class="btn secondary" href="/browse" >返回</a>
+{% endif %}
+
+{% if project.contractor_id and user.id == project.contractor_id and project.status in ["in_progress","submitted","reject"] %}
+<p><a class="btn" href="/projects/{{ project.id }}/upload">上傳結案檔案</a></p>
+<h3>已上傳的結案檔案</h3>
+
+{% if closures and closures|length > 0 %}
+  <table>
+    <tr>
+      <th style="width:90px;">版本</th>
+      <th>檔名</th>
+      <th style="width:160px;">上傳時間</th>
+      <th style="width:160px;">操作</th>
+    </tr>
+
+    {% for f in closures %}
+      <tr>
+        <td>
+          <span class="badge">v{{ f.version }}</span>
+        </td>
+        <td>
+          {{ f.filename }}
+        </td>
+        <td>
+          {{ f.created_at.strftime("%Y-%m-%d %H:%M") }}
+        </td>
+        <td>
+          <a class="btn_download" href="/files/{{ f.id }}">下載</a>
+
+          
+        </td>
+      </tr>
+    {% endfor %}
+  </table>
+
+{% else %}
+  <p class="muted">目前尚未上傳任何結案檔案。</p>
+{% endif %}
+
+{% endif %}
+
+{% if project.contractor_id and user.id == project.contractor_id and project.status in ["submitted","reject"] %}
+<h3>待解決事項（Issue）</h3>
+
+<div style="margin-top:16px;">
+  {% if issues and issues|length > 0 %}
+	<div class="issue-grid">
+	  {% for i in issues %}
+		<div class="issue-card">
+		  <div class="issue-head">
+			<div class="issue-title">{{ i.title }}</div>
+			{% set status_text = {
+			  'open': '處理中',
+			  'resolved': '已關閉'
+			} %}
+			{% set status_class = {
+			  'open': '',
+			  'resolved': 'badge_ok'
+			} %}
+
+			<span class="badge {{ status_class.get(i.status, '') }}">
+			  {{ status_text.get(i.status, i.status) }}
+			</span>
+
+		  </div>
+
+		  <div class="issue-desc muted">
+			{{ i.description|replace('\n','<br>')|safe }}
+		  </div>
+
+		  {# ===== 留言串（顯示雙方留言）===== #}
+		  <div class="issue-thread">
+			<div class="issue-thread-title">留言</div>
+
+			{% set cmts = issue_comments_by_issue.get(i.id, []) %}
+			{% if cmts|length == 0 %}
+			  <div class="muted">目前尚無留言</div>
+			{% else %}
+			  <div style="display:flex; flex-direction:column; gap:10px;">
+				{% for c in cmts %}
+				  <div class="comment-bubble">
+					<div class="comment-meta">
+					  <div class="comment-author">
+						{{ c.author_name }}
+						{% if c.author_id == user.id %}
+						  <span class="badge" style="margin-left:6px;">我</span>
+						{% endif %}
+					  </div>
+					  <div class="muted" style="font-size:12px;">
+						{{ c.created_at.strftime("%Y-%m-%d %H:%M") if c.created_at else "" }}
+					  </div>
+					</div>
+					<div style="margin-top:6px;">
+					  {{ c.content|replace('\n','<br>')|safe }}
+					</div>
+				  </div>
+				{% endfor %}
+			  </div>
+			{% endif %}
+		  </div>
+		  {# ================================ #}
+
+		  <div class="issue-reply">
+			{% if i.status != 'resolved' %}
+			  <form method="post" action="/issues/{{ i.id }}/comment">
+				<textarea name="content" rows="3" required placeholder="輸入回覆內容..."></textarea>
+				<button class="btn" type="submit" style="margin-top:10px;">送出回覆</button>
+			  </form>
+			{% else %}
+			  <div class="muted" style="margin-top:4px;">
+				此 Issue 已完成（無法再留言）
+			  </div>
+			{% endif %}
+		  </div>
+
+		</div>
+	  {% endfor %}
+	</div>
+
+  {% else %}
+    <p class="muted">目前沒有待解決事項。</p>
+  {% endif %}
+</div>
+{% endif %}
+
+{% if project.contractor_id and user.id == project.contractor_id and project.status in ["closed"] %}
+<h3>已上傳的檔案</h3>
+{% if closures and closures|length > 0 %}
+  <table>
+    <tr>
+      <th style="width:90px;">版本</th>
+      <th>檔名</th>
+      <th style="width:160px;">上傳時間</th>
+      <th style="width:160px;">操作</th>
+    </tr>
+
+    {% for f in closures %}
+      <tr>
+        <td>
+          <span class="badge">v{{ f.version }}</span>
+        </td>
+        <td>
+          {{ f.filename }}
+        </td>
+        <td>
+          {{ f.created_at.strftime("%Y-%m-%d %H:%M") }}
+        </td>
+        <td>
+          <a class="btn_download" href="/files/{{ f.id }}">下載</a>
+
+          
+        </td>
+      </tr>
+    {% endfor %}
+  </table>
+  {% endif %}
+<hr/>
+<h3>評價委託人</h3>
+
+  {% if not has_rated_client %}
+    <p>
+      <a class="btn" href="/projects/{{ project.id }}/rate?target=client">
+        我要評價此委託人
+      </a>
+    </p>
+  {% else %}
+    <p class="muted">您已經評價過此委託人。</p>
+  {% endif %}
+{% endif %}
+{% endblock %}
