@@ -68,7 +68,7 @@
 {% endif %}
 
 <p>
-  <a href="javascript:history.back()" class="btn secondary">返回上一頁</a>
+  <a href="{{ next_url or '/dashboard' }}" class="btn secondary">返回</a>
 </p>
 
 {% endblock %}

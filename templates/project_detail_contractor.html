@@ -84,7 +84,7 @@
   }
   
   .badge_ok{
-	background:gray;        /* 淡綠底 */
+	background:#D3D3D3;        
 	border:1px solid #7FBF9A;
 	color:black;
   }
@@ -99,7 +99,7 @@
   {{ project.status }}
 </span><br>
 
-<b>投標截止：</b>
+<b>投標截止期限：</b>
   {% if project.bid_deadline %}
     {{ project.bid_deadline }}<br>
   {% else %}
@@ -107,7 +107,7 @@
   {% endif %}
 
 <b>委託人：</b> {{ project.client_username }}<br/>
-<a class="btn secondary" href="/ratings/client/{{ project.client_id }}"
+<a class="btn secondary"  href="/ratings/client/{{ project.client_id }}?next=/projects/{{ project.id }}"
      style="padding:6px 8px; position:relative; top:10px">
     查看委託人評價
 </a>
@@ -115,7 +115,7 @@
 <p><b>需求描述：</b><br>{{ project.description|replace('\n','<br>')|safe }}</p>
 
 {% if project.status == "open" %}
-<p class="muted">此案件正在徵人中~~~<br/>您可在「瀏覽公開案件」頁面(上一頁)提出承包意願!!!</p>
+<p class="muted" style="background:#E8F6EF; border:1px solid #A6D9C7; color:#2F3E35; padding:10px 12px; border-radius:10px; margin:12px 0;">此案件正在徵人中~~~<br/>您可在「瀏覽公開案件」頁面(上一頁)提出承包意願!!!</p>
 <a class="btn secondary" href="/browse" >返回</a>
 {% endif %}
 

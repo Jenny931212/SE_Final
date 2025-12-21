@@ -16,7 +16,7 @@ from db import getDB, close_pool
 from auth import setup_session, current_user, login_user, logout_user
 
 templates = Jinja2Templates(directory="templates")  #設定HTML位置
-RATING_DEADLINE_DAYS = 14  # 評價期限：結案後 14 天內可以評
+RATING_DEADLINE_DAYS = 14  #評價期限：結案後 14 天內可以評
 UPLOAD_DIR = Path("uploads")    #設定上傳的檔案要儲存的資料夾
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)   #建立資料夾
 
@@ -199,6 +199,7 @@ async def project_detail(request: Request, project_id: int, conn = Depends(getDB
     user = await current_user(request, conn)
     if not user:
         return RedirectResponse("/login")
+    notice = request.query_params.get("notice")
     async with conn.cursor(row_factory=dict_row) as cur:
         #查詢該案件基本資料
         await cur.execute("""
@@ -287,7 +288,8 @@ async def project_detail(request: Request, project_id: int, conn = Depends(getDB
                 "closures": closures,
                 "issues": issues,  
                 "issue_comments_by_issue": issue_comments_by_issue,  
-                "has_rated_contractor": has_rated_contractor,  
+                "has_rated_contractor": has_rated_contractor,
+                "notice": notice,
             })
     elif user["role"] == "contractor":
         return templates.TemplateResponse("project_detail_contractor.html",
@@ -411,6 +413,20 @@ async def close_decision(request: Request, project_id: int, decision: str = Form
         #如果找不到或不是該案的委託人就禁止
         if not row or row["client_id"] != user["id"]:
             raise HTTPException(403, "無權限")
+        #如果要「接受結案」，必須先確認所有issue都已經關閉(resolved)
+        if decision == "accept":
+            #去DB數「未解決 Issue」有幾筆
+            await cur.execute("""
+                SELECT COUNT(*) AS open_cnt
+                FROM issues
+                WHERE project_id=%s
+                  AND status <> 'resolved';
+            """, (project_id,))
+            r = await cur.fetchone()
+            open_cnt = int(r["open_cnt"] or 0)  #把open_cnt轉成整數
+            #如果還有未處理的issue就不能結案，回到案件詳情畫面並顯示通知
+            if open_cnt > 0:
+                return RedirectResponse(f"/projects/{project_id}?notice=issues_not_resolved",status_code=status.HTTP_302_FOUND)
         #設定新狀態並更新DB(如果按的是 接受結案->closed 退回修改->reject)
         new_status = "closed" if decision == "accept" else "reject"
         await cur.execute("UPDATE projects SET status=%s, updated_at=NOW() WHERE id=%s;", (new_status, project_id))
@@ -824,13 +840,14 @@ async def view_client_ratings(request: Request, user_id: int, conn = Depends(get
         items = await cur.fetchall()
     dim_labels = ["需求合理性", "驗收難度", "合作態度"]  #在HTML顯示用
     role_label = "委託人"  #在HTML顯示用
+    next_url = request.query_params.get("next") or "/dashboard"
     return templates.TemplateResponse(
         "ratings_user.html",
         {
             "request": request, "user": user,
             "target": target, "role": "client",
             "role_label": role_label,"dim_labels": dim_labels,
-            "stats": stats, "items": items,
+            "stats": stats, "items": items, "next_url": next_url,
         },
     )
 #顯示接案人歷史評價畫面
@@ -874,13 +891,14 @@ async def view_contractor_ratings(request: Request, user_id: int, conn = Depends
         items = await cur.fetchall()
     dim_labels = ["產出品質", "執行效率", "合作態度"]  #在HTML顯示用
     role_label = "接案人"  #在HTML顯示用
+    next_url = request.query_params.get("next") or "/dashboard"
     return templates.TemplateResponse(
         "ratings_user.html",
         {
             "request": request, "user": user,
             "target": target, "role": "contractor",
             "role_label": role_label, "dim_labels": dim_labels,
-            "stats": stats, "items": items,
+            "stats": stats, "items": items, "next_url": next_url,
         },
     )
 
@@ -993,7 +1011,7 @@ async def issue_resolve(issue_id: int, request: Request, conn=Depends(getDB)):
     async with conn.cursor(row_factory=dict_row) as cur:
         #找出這個issue的委託人是誰
         await cur.execute("""
-            SELECT p.client_id
+            SELECT p.client_id, i.project_id
             FROM issues i
             JOIN projects p ON p.id = i.project_id
             WHERE i.id=%s;
