@@ -1,7 +1,7 @@
 -- 使用 UTF8
 SET client_encoding = 'UTF8';
 
--- ================= 使用者 =================
+-- ================= 1.使用者 =================
 CREATE TABLE users (
     id SERIAL PRIMARY KEY,
     username TEXT UNIQUE NOT NULL,
@@ -10,7 +10,7 @@ CREATE TABLE users (
     created_at TIMESTAMP DEFAULT NOW()
 );
 
--- ================= 專案 =================
+-- ================= 2.案件 =================
 CREATE TABLE projects (
     id SERIAL PRIMARY KEY,
     title TEXT NOT NULL,
@@ -25,7 +25,7 @@ CREATE TABLE projects (
     updated_at TIMESTAMP DEFAULT NOW()
 );
 
--- ================= 投標 / 提案 =================
+-- ================= 3.投標 / 提案 =================
 CREATE TABLE proposals (
     id SERIAL PRIMARY KEY,
     project_id INT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
@@ -38,7 +38,7 @@ CREATE TABLE proposals (
     created_at TIMESTAMP DEFAULT NOW()
 );
 
--- ================= 結案檔案（版本控管） =================
+-- ================= 4.結案檔案 =================
 CREATE TABLE closure_files (
     id SERIAL PRIMARY KEY,
     project_id INT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
@@ -49,7 +49,7 @@ CREATE TABLE closure_files (
     created_at TIMESTAMP DEFAULT NOW()
 );
 
--- ================= 評價 =================
+-- ================= 5.評價 =================
 CREATE TABLE ratings (
     id SERIAL PRIMARY KEY,
     project_id INT NOT NULL REFERENCES projects(id),
@@ -64,7 +64,7 @@ CREATE TABLE ratings (
     created_at TIMESTAMP DEFAULT NOW()
 );
 
--- ================= Issue =================
+-- ================= 6.Issue =================
 CREATE TABLE issues (
     id SERIAL PRIMARY KEY,
     project_id INT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
@@ -76,7 +76,7 @@ CREATE TABLE issues (
     resolved_at TIMESTAMP
 );
 
--- ================= Issue 回覆 =================
+-- ================= 7.Issue留言 =================
 CREATE TABLE issue_comments (
     id SERIAL PRIMARY KEY,
     issue_id INT NOT NULL REFERENCES issues(id) ON DELETE CASCADE,

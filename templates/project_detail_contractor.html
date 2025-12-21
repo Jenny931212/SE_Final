@@ -98,6 +98,14 @@
 <span class="badge {% if project.status == 'reject' %}badge_reject{% endif %}">
   {{ project.status }}
 </span><br>
+
+<b>投標截止：</b>
+  {% if project.bid_deadline %}
+    {{ project.bid_deadline }}<br>
+  {% else %}
+    <span class="muted">未設定</span>
+  {% endif %}
+
 <b>委託人：</b> {{ project.client_username }}<br/>
 <a class="btn secondary" href="/ratings/client/{{ project.client_id }}"
      style="padding:6px 8px; position:relative; top:10px">
@@ -236,14 +244,35 @@
 
 {% if project.contractor_id and user.id == project.contractor_id and project.status in ["closed"] %}
 <h3>已上傳的檔案</h3>
-<ul>
-  {% for f in closures %}
-    <li>
-		{{ f.filename }}（{{ f.created_at.strftime("%Y-%m-%d %H:%M") }}）
-		<a class="btn_download" href="/files/{{ f.id }}" >下載</a>
-	</li>
-  {% endfor %}
-</ul>
+{% if closures and closures|length > 0 %}
+  <table>
+    <tr>
+      <th style="width:90px;">版本</th>
+      <th>檔名</th>
+      <th style="width:160px;">上傳時間</th>
+      <th style="width:160px;">操作</th>
+    </tr>
+
+    {% for f in closures %}
+      <tr>
+        <td>
+          <span class="badge">v{{ f.version }}</span>
+        </td>
+        <td>
+          {{ f.filename }}
+        </td>
+        <td>
+          {{ f.created_at.strftime("%Y-%m-%d %H:%M") }}
+        </td>
+        <td>
+          <a class="btn_download" href="/files/{{ f.id }}">下載</a>
+
+          
+        </td>
+      </tr>
+    {% endfor %}
+  </table>
+  {% endif %}
 <hr/>
 <h3>評價委託人</h3>
 

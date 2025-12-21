@@ -13,7 +13,7 @@
       required
       value="{% if project.bid_deadline %}{{ project.bid_deadline.strftime('%Y-%m-%dT%H:%M') }}{% endif %}"
     >
-  <button type="submit">儲存</button>
-  <a class="btn secondary" href="/projects/{{ project.id }}">返回</a>
+  <button type="submit" style="position:relative; top:10px">儲存</button>
+  <a class="btn secondary" href="/projects/{{ project.id }}" style="position:relative; top:10px">返回</a>
 </form>
 {% endblock %}

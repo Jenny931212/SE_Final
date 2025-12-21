@@ -118,7 +118,7 @@ async def dashboard(request: Request, conn = Depends(getDB)):
                 ORDER BY COALESCE(pr.created_at, p.created_at) DESC;
             """, (user["id"],))
             my_projects = await cur.fetchall()
-            await cur.execute("SELECT COUNT(*) AS c FROM projects WHERE status='open';")
+            await cur.execute("SELECT COUNT(*) AS c FROM projects WHERE status='open' AND (bid_deadline IS NULL OR bid_deadline >= NOW());")
             open_count = (await cur.fetchone())["c"]
         return templates.TemplateResponse("dashboard_contractor.html",
             {"request": request, "user": user, "projects": my_projects, "open_count": open_count, "notice": notice})
@@ -137,15 +137,14 @@ async def project_create(
     request: Request,
     title: str = Form(...),
     description: str = Form(...),
-    bid_deadline: str = Form(...),  # ★ 新增：HTML 會用 datetime-local 傳回來
+    bid_deadline: str = Form(...),  #新增:HTML 會用 datetime-local 傳回來
     conn = Depends(getDB)
 ):
     user = await current_user(request, conn)    #從 session 讀取目前登入者的資訊
     if not user or user["role"] != "client":
         return RedirectResponse("/login")
     async with conn.cursor(row_factory=dict_row) as cur:
-        # ★ 新增：把 datetime-local 的字串轉成 datetime
-        deadline_dt = datetime.fromisoformat(bid_deadline)
+        deadline_dt = datetime.fromisoformat(bid_deadline)  #新增:把 datetime-local 的字串轉成 datetime
         #把建立的標題、描述等案件內容寫入資料庫
         await cur.execute("""
             INSERT INTO projects (title, description, status, client_id, bid_deadline)
@@ -178,15 +177,13 @@ async def project_edit(
     project_id: int,
     title: str = Form(...),
     description: str = Form(...),
-    bid_deadline: str = Form(...),  # ★新增
+    bid_deadline: str = Form(...),  #新增:接收投標截止日期
     conn = Depends(getDB)
 ):
     user = await current_user(request, conn)
     if not user or user["role"] != "client":
         return RedirectResponse("/login")
-
-    deadline_dt = datetime.fromisoformat(bid_deadline)  # ★新增
-
+    deadline_dt = datetime.fromisoformat(bid_deadline)  #新增:把 datetime-local 的字串轉成 datetime
     async with conn.cursor() as cur:
         await cur.execute("""
             UPDATE projects
@@ -194,14 +191,12 @@ async def project_edit(
             WHERE id=%s AND client_id=%s;
         """, (title, description, deadline_dt, project_id, user["id"]))
         await conn.commit()
-
     return RedirectResponse(f"/projects/{project_id}", status_code=status.HTTP_302_FOUND)
 
 #查看案件詳情(委託人 & 接案人)
 @app.get("/projects/{project_id}", response_class=HTMLResponse)
 async def project_detail(request: Request, project_id: int, conn = Depends(getDB)):
     user = await current_user(request, conn)
-    notice = request.query_params.get("notice")
     if not user:
         return RedirectResponse("/login")
     async with conn.cursor(row_factory=dict_row) as cur:
@@ -229,8 +224,7 @@ async def project_detail(request: Request, project_id: int, conn = Depends(getDB
             SELECT * FROM closure_files WHERE project_id=%s ORDER BY created_at DESC;
         """, (project_id,))
         closures = await cur.fetchall()
-        
-        # ================== ★ 新增：撈 Issues + 留言 ==================
+        #新增:查詢該案的Issues & 留言
         await cur.execute("""
             SELECT i.*, u.username AS opener_name
             FROM issues i
@@ -240,7 +234,7 @@ async def project_detail(request: Request, project_id: int, conn = Depends(getDB
         """, (project_id,))
         issues = await cur.fetchall()
 
-        # 把留言整理成：{ issue_id: [comment, comment, ...] }
+        #把留言整理成：{ issue_id: [comment, comment, ...] }
         issue_comments_by_issue = {}
 
         if issues:
@@ -256,15 +250,13 @@ async def project_detail(request: Request, project_id: int, conn = Depends(getDB
 
             for c in comments:
                 issue_comments_by_issue.setdefault(c["issue_id"], []).append(c)
-        # ============================================================
 
-
-        # ⭐⭐ 新增：查詢「目前登入者是否已經評價過對方」⭐⭐
+        #查詢「目前登入者是否已經評價過對方」
         has_rated_contractor = False
         has_rated_client = False
         if project["contractor_id"]:
             if user["role"] == "client" and project["client_id"] == user["id"]:
-                # 我是委託人，看我有沒有評過這個接案人
+                #找委託人有沒有評過這個接案人
                 await cur.execute(
                     """
                     SELECT 1 FROM ratings
@@ -272,9 +264,9 @@ async def project_detail(request: Request, project_id: int, conn = Depends(getDB
                     """,
                     (project_id, user["id"], project["contractor_id"])
                 )
-                has_rated_contractor = bool(await cur.fetchone())
+                has_rated_contractor = bool(await cur.fetchone())   #有資料 → True(評過) / 沒資料 → False（沒評過）
             elif user["role"] == "contractor" and project["contractor_id"] == user["id"]:
-                # 我是接案人，看我有沒有評過這個委託人
+                #找接案人有沒有評過這個委託人
                 await cur.execute(
                     """
                     SELECT 1 FROM ratings
@@ -293,10 +285,9 @@ async def project_detail(request: Request, project_id: int, conn = Depends(getDB
                 "project": project,
                 "proposals": proposals,
                 "closures": closures,
-                "issues": issues,  # ★ 新增
-                "issue_comments_by_issue": issue_comments_by_issue,  # ★ 新增
-                "has_rated_contractor": has_rated_contractor,  # ⭐ 新增變數
-                "notice": notice,
+                "issues": issues,  
+                "issue_comments_by_issue": issue_comments_by_issue,  
+                "has_rated_contractor": has_rated_contractor,  
             })
     elif user["role"] == "contractor":
         return templates.TemplateResponse("project_detail_contractor.html",
@@ -306,10 +297,9 @@ async def project_detail(request: Request, project_id: int, conn = Depends(getDB
                 "project": project,
                 "proposals": proposals,
                 "closures": closures,
-                "issues": issues,  # ★ 新增
-                "issue_comments_by_issue": issue_comments_by_issue,  # ★ 新增
-                "has_rated_client": has_rated_client,          # ⭐ 新增變數
-                "notice": notice,
+                "issues": issues,  
+                "issue_comments_by_issue": issue_comments_by_issue,  
+                "has_rated_client": has_rated_client,    
             })
     else:
         raise HTTPException(403, "無權限")
@@ -320,7 +310,6 @@ async def download_proposal_file(proposal_id: int, request: Request, conn=Depend
     user = await current_user(request, conn)
     if not user:
         return RedirectResponse("/login")
-
     async with conn.cursor(row_factory=dict_row) as cur:
         await cur.execute("""
             SELECT pr.id, pr.proposal_filename, pr.proposal_filepath,
@@ -333,11 +322,9 @@ async def download_proposal_file(proposal_id: int, request: Request, conn=Depend
 
     if not row:
         raise HTTPException(404, "提案書不存在")
-
     # 只有此案委託人或接案人能下載
     if user["id"] not in (row["client_id"], row["contractor_id"]):
         raise HTTPException(403, "無權限下載")
-
     path = row["proposal_filepath"]
     if not path or not os.path.exists(path):
         raise HTTPException(404, "檔案已遺失")
@@ -356,7 +343,7 @@ async def select_contractor(request: Request, project_id: int, proposal_id: int 
         proj = await cur.fetchone()
         if not proj or proj["client_id"] != user["id"]:
             raise HTTPException(403, "無權限")
-        # ★ 延伸一：只能在截止後選擇提案者
+        #新增:只能在截止後選擇提案者
         if proj["bid_deadline"] and datetime.now(tz=proj["bid_deadline"].tzinfo) < proj["bid_deadline"]:
             return RedirectResponse(
                 f"/projects/{project_id}?notice=bid_not_ended",
@@ -448,11 +435,12 @@ async def browse_open_projects(
             like = f"%{q}%"
             await cur.execute(
                 """
-                SELECT id, title, description, created_at
+                SELECT id, title, description, created_at, bid_deadline
                 FROM projects
                 WHERE status='open'
+                  AND (bid_deadline IS NULL OR bid_deadline >= NOW())
                   AND (title ILIKE %s OR description ILIKE %s)
-                ORDER BY created_at DESC, id DESC;
+                ORDER BY bid_deadline ASC NULLS LAST, created_at DESC, id DESC;
                 """,
                 (like, like),
             )
@@ -460,10 +448,11 @@ async def browse_open_projects(
         else:
             await cur.execute(
                 """
-                SELECT id, title, description, created_at
+                SELECT id, title, description, created_at, bid_deadline
                 FROM projects
                 WHERE status='open'
-                ORDER BY created_at DESC, id DESC;
+                  AND (bid_deadline IS NULL OR bid_deadline >= NOW())
+                ORDER BY bid_deadline ASC NULLS LAST, created_at DESC, id DESC;
                 """
             )
         projects = await cur.fetchall()
@@ -482,59 +471,58 @@ async def submit_proposal_page(request: Request, project_id: int, conn = Depends
     async with conn.cursor(row_factory=dict_row) as cur:
         await cur.execute("SELECT id, title, status, bid_deadline FROM projects WHERE id=%s;", (project_id,))
         project = await cur.fetchone()
-    # ★ 延伸一：截止後不能再投標
+    #新增:截止後不能再投標
     if project["bid_deadline"] and datetime.now() > project["bid_deadline"]:
         raise HTTPException(400, "已超過投標截止期限，無法提出意願")
     #如果案件不存在或不是open的狀態就會報錯
     if not project or project["status"] != "open":
         raise HTTPException(404, "案件不可提出意願")
     return templates.TemplateResponse("submit_proposal.html", {"request": request, "user": user, "project": project}) 
-#接收接案人送出的提交意願相關資訊（含提案書 PDF）
+#接收接案人送出的提交意願相關資訊
 @app.post("/projects/{project_id}/propose")
 async def submit_proposal(
     request: Request,
     project_id: int,
     message: str = Form(...),
     price: float = Form(...),
-    proposal_file: UploadFile = File(...),  # ★ 延伸一：提案書（PDF）
+    proposal_file: UploadFile = File(...),
     conn = Depends(getDB)
 ):
     user = await current_user(request, conn)
     if not user or user["role"] != "contractor":
         return RedirectResponse("/login")
 
-    # ★ 延伸一：檔案基本檢查（雙保險：content_type + 副檔名）
+    #檔案檢查（content_type + 副檔名）
     filename = (proposal_file.filename or "").strip()
     if not filename:
         raise HTTPException(400, "請選擇提案書檔案")
+    #檔名副檔名檢查
     if not filename.lower().endswith(".pdf"):
         raise HTTPException(400, "提案書只允許 PDF 檔")
+    #content_type 檢查(有些瀏覽器會給 octet-stream)
     if proposal_file.content_type not in ("application/pdf", "application/octet-stream"):
-        # 有些瀏覽器會給 octet-stream，所以放寬，但不是 pdf 就擋
         raise HTTPException(400, "提案書格式不正確（請上傳 PDF）")
 
     async with conn.cursor(row_factory=dict_row) as cur:
-        # ★ 延伸一：同時檢查案件狀態 + 投標截止期限
+        #同時檢查案件狀態 + 投標截止期限(新增)
         await cur.execute("SELECT status, bid_deadline FROM projects WHERE id=%s;", (project_id,))
         row = await cur.fetchone()
         if not row:
             raise HTTPException(404, "找不到案件")
         if row["status"] != "open":
             raise HTTPException(400, "案件不可提出意願")
-
         if row["bid_deadline"] and datetime.now(tz=row["bid_deadline"].tzinfo) > row["bid_deadline"]:
             raise HTTPException(400, "已超過投標截止期限，無法提出意願")
 
-        # ★ 延伸一：把 PDF 存到磁碟（檔名不可覆蓋：timestamp + uuid）
-        content = await proposal_file.read()
-        safe_uid = uuid.uuid4().hex[:10]
+        #把使用者上傳的PDF存到硬碟
+        content = await proposal_file.read()    #把上傳檔案內容讀成 bytes
+        safe_uid = uuid.uuid4().hex[:10]    #產生一段不容易重複的隨機碼(避免撞檔名 被覆蓋)
         ts = datetime.now().strftime("%Y%m%d%H%M%S")
         dest = UPLOAD_DIR / f"proposal_p{project_id}_u{user['id']}_{ts}_{safe_uid}.pdf"
         with dest.open("wb") as f:
             f.write(content)
 
-        # ★ 延伸一：把提案資料 + 提案書路徑寫進 proposals
-        # 需要 proposals 表新增 proposal_filename / proposal_filepath 欄位（下面我有 SQL）
+        #把原檔名&實際檔案路徑寫進DB
         await cur.execute("""
             INSERT INTO proposals (
                 project_id, contractor_id, message, price,
@@ -546,7 +534,6 @@ async def submit_proposal(
             filename, str(dest)
         ))
         await conn.commit()
-
     return RedirectResponse("/dashboard?notice=proposal_sent", status_code=status.HTTP_302_FOUND)   #回到個人首頁畫面並出現已送出意願的通知
 
 #接案人開啟上傳結案檔案畫面
@@ -584,48 +571,43 @@ async def upload_closure(
         raise HTTPException(400, "請選擇要上傳的檔案")
 
     async with conn.cursor(row_factory=dict_row) as cur:
-        # 確認案件存在 + 權限
+        #確認案件是否存在以及權限確認
         await cur.execute("SELECT contractor_id, status FROM projects WHERE id=%s;", (project_id,))
         row = await cur.fetchone()
         if not row:
             raise HTTPException(404, "找不到案件")
         if row["contractor_id"] != user["id"]:
             raise HTTPException(403, "無權限")
-
-        # ★ 延伸一：版本號自動遞增（同一 project 下）
-        # 需要 closure_files 表新增 version 欄位（下面我有 SQL）
+        
+        #找這個專案目前最大的結案檔案版本號
         await cur.execute("SELECT COALESCE(MAX(version), 0) AS v FROM closure_files WHERE project_id=%s;", (project_id,))
         vrow = await cur.fetchone()
-        next_version = int(vrow["v"]) + 1
+        next_version = int(vrow["v"]) + 1  #自動遞增
 
-        # ★ 延伸一：存檔（檔名不可覆蓋：timestamp + uuid）
+        #把使用者上傳的PDF存到硬碟(也會控制檔名)
         content = await file.read()
         safe_uid = uuid.uuid4().hex[:10]
         ts = datetime.now().strftime("%Y%m%d%H%M%S")
         dest = UPLOAD_DIR / f"closure_p{project_id}_v{next_version}_{ts}_{safe_uid}_{filename}"
-
         with dest.open("wb") as f:
             f.write(content)
 
-        # ★ 延伸一：每次上傳都 INSERT 一筆（全版本保留）
+        #都寫入DB
         await cur.execute("""
             INSERT INTO closure_files (project_id, contractor_id, version, filename, filepath)
             VALUES (%s,%s,%s,%s,%s);
         """, (project_id, user["id"], next_version, filename, str(dest)))
 
-        # 案件狀態更新：上傳後 → submitted（你原本就這樣）
+        #更新案件狀態(上傳結案檔案後 → submitted)
         await cur.execute(
             "UPDATE projects SET status='submitted', updated_at=NOW() WHERE id=%s;",
             (project_id,)
         )
-
         await conn.commit()
-
     return RedirectResponse(f"/projects/{project_id}", status_code=status.HTTP_302_FOUND)   #回到案件詳情畫面
 
-# ================= 評價功能：建立評價 =================
-
-# 顯示評價頁
+# ================= 評價功能：建立評價/查看歷史評價 =================
+#顯示評價畫面
 @app.get("/projects/{project_id}/rate", response_class=HTMLResponse)
 async def rate_project_page(
     request: Request,
@@ -636,12 +618,10 @@ async def rate_project_page(
     user = await current_user(request, conn)
     if not user:
         return RedirectResponse("/login")
-
     if target not in ("client", "contractor"):
         raise HTTPException(400, "未知的評價對象")
-
     async with conn.cursor(row_factory=dict_row) as cur:
-        # 抓案件 + 雙方基本資訊
+        #從DB找出案件基本資訊以及雙方名稱
         await cur.execute(
             """
             SELECT p.*, 
@@ -655,7 +635,6 @@ async def rate_project_page(
             (project_id,),
         )
         project = await cur.fetchone()
-
         if not project:
             raise HTTPException(404, "找不到案件")
         if project["status"] != "closed":
@@ -663,9 +642,9 @@ async def rate_project_page(
         if not project["contractor_id"]:
             raise HTTPException(400, "此案件尚未有接案人")
 
-        # 確認 rater / target 是誰
+        #判斷「誰評誰」並準備頁面要顯示的文字
         if target == "contractor":
-            # 只有委託人可以評接案人
+            #只有委託人可以評接案人
             if user["id"] != project["client_id"]:
                 raise HTTPException(403, "無權限評價")
             target_id = project["contractor_id"]
@@ -673,35 +652,29 @@ async def rate_project_page(
             dim_labels = ["產出品質", "執行效率", "合作態度"]
             role_label = "接案人"
         else:
-            # target == "client"：只有接案人可以評委託人
+            #只有接案人可以評委託人
             if user["id"] != project["contractor_id"]:
                 raise HTTPException(403, "無權限評價")
             target_id = project["client_id"]
             target_name = project["client_username"]
             dim_labels = ["需求合理性", "驗收難度", "合作態度"]
             role_label = "委託人"
-
-        # ---------- 評價期限 & 剩餘時間計算（★這一段是新加的） ----------
+        #評價期限 & 計算剩餘時間
         remain_days = 0
         remain_hours = 0
-
-        closed_at = project["updated_at"]
-        if closed_at and isinstance(closed_at, datetime):
-            deadline_at = closed_at + timedelta(days=RATING_DEADLINE_DAYS)
-            # 用與 closed_at 相同的時區算現在時間
-            now = datetime.now(tz=closed_at.tzinfo)
-
-            # 若已超過評價期限，直接擋掉
+        closed_at = project["updated_at"]   #案件最後更新的時間就是結案時間
+        if closed_at and isinstance(closed_at, datetime):   #確保真的有結案時間且型別正確
+            deadline_at = closed_at + timedelta(days=RATING_DEADLINE_DAYS)  #計算評價截止時間          
+            now = datetime.now(tz=closed_at.tzinfo)   #取得與結案時間同時區的現在時間
+            #如果已經超過評價時間就報錯
             if now > deadline_at:
                 raise HTTPException(400, "已超過評價期限")
-
+            #計算剩餘時間
             diff = deadline_at - now
             total_hours = int(diff.total_seconds() // 3600)
             remain_days = total_hours // 24
             remain_hours = total_hours % 24
-        # ---------------------------------------------------------
-
-        # 檢查是否已評過
+        #檢查是否已評過
         await cur.execute(
             """
             SELECT 1 FROM ratings
@@ -711,55 +684,44 @@ async def rate_project_page(
         )
         if await cur.fetchone():
             raise HTTPException(400, "您已經評價過此對象")
-
     return templates.TemplateResponse(
         "rate_project.html",
         {
-            "request": request,
-            "user": user,
-            "project": project,
-            "target_role": target,
-            "target_name": target_name,
-            "role_label": role_label,
-            "dim_labels": dim_labels,
-            "deadline_days": RATING_DEADLINE_DAYS,
-            "remain_days": remain_days,     # ★ 新增：丟給模板顯示倒數
-            "remain_hours": remain_hours,   # ★ 新增：丟給模板顯示倒數
+            "request": request, "user": user, "project": project,
+            "target_role": target, "target_name": target_name, "role_label": role_label,
+            "dim_labels": dim_labels, "deadline_days": RATING_DEADLINE_DAYS,
+            "remain_days": remain_days, "remain_hours": remain_hours,
         },
     )
-
-# 接收評價表單
+#接收評價表單
 @app.post("/projects/{project_id}/rate")
 async def rate_project_submit(
     request: Request,
     project_id: int,
-    target: str = Form(...),        # "client" 或 "contractor"
-    score_1: str = Form(...),       # 星星選到的分數 (1~5)
+    target: str = Form(...),
+    score_1: str = Form(...), 
     score_2: str = Form(...),
     score_3: str = Form(...),
-    comment: str = Form(""),        # 質性評論，可留白
+    comment: str = Form(""),
     conn = Depends(getDB),
 ):
     user = await current_user(request, conn)
     if not user:
         return RedirectResponse("/login")
-
     if target not in ("client", "contractor"):
         raise HTTPException(400, "未知的評價對象")
-
-    # 1. 把字串分數轉成 int，順便做基本檢查
+    #把字串分數轉成 int，同時做基本檢查
     try:
         s1 = int(score_1)
         s2 = int(score_2)
         s3 = int(score_3)
     except (TypeError, ValueError):
         raise HTTPException(400, "請完整選擇三個評分（1~5 顆星）")
-
     if not (1 <= s1 <= 5 and 1 <= s2 <= 5 and 1 <= s3 <= 5):
         raise HTTPException(400, "分數必須介於 1~5 之間")
 
     async with conn.cursor(row_factory=dict_row) as cur:
-        # 2. 抓案件 & 基本檢查
+        #從DB找出案件基本資訊以及雙方名稱
         await cur.execute(
             """
             SELECT p.*,
@@ -773,88 +735,67 @@ async def rate_project_submit(
             (project_id,),
         )
         project = await cur.fetchone()
-
         if not project:
             raise HTTPException(404, "找不到案件")
         if project["status"] != "closed":
             raise HTTPException(400, "案件尚未結案，無法評價")
         if not project["contractor_id"]:
             raise HTTPException(400, "此案件尚未有接案人")
-
-        # 3. 判斷這次是誰評誰 → 決定 target_id / rater_id / 角色文字
+        #判斷「誰評誰」 (決定資料要怎麼寫進DB)
         if target == "contractor":
-            # 委託人評接案人
+            #委託人評接案人
             if user["id"] != project["client_id"]:
                 raise HTTPException(403, "無權限評價")
             target_id = project["contractor_id"]
             target_role = "contractor"
             rater_role = "client"
         else:
-            # 接案人評委託人
+            #接案人評委託人
             if user["id"] != project["contractor_id"]:
                 raise HTTPException(403, "無權限評價")
             target_id = project["client_id"]
             target_role = "client"
             rater_role = "contractor"
-
-        # 4. 確認這個人對這個對象是不是已經評過
+        #檢查是否已評過
         await cur.execute(
             """
             SELECT 1 FROM ratings
-            WHERE project_id = %s
-              AND rater_id   = %s
-              AND target_id  = %s;
+            WHERE project_id = %s AND rater_id = %s AND target_id = %s;
             """,
             (project_id, user["id"], target_id),
         )
         if await cur.fetchone():
             raise HTTPException(400, "您已經評價過此對象")
-
-        # 5. 寫入 ratings（這裡欄位名要跟你現在的 table 一樣）
+        #把這筆評價資料寫入DB
         await cur.execute(
             """
-            INSERT INTO ratings (
-                project_id,
-                target_id, target_role,
-                rater_id,  rater_role,
-                score_1, score_2, score_3,
-                comment
-            )
+            INSERT INTO ratings (project_id, target_id, target_role, rater_id,  rater_role,
+            score_1, score_2, score_3, comment)
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s);
             """,
             (
-                project_id,
-                target_id, target_role,
+                project_id, target_id, target_role,
                 user["id"], rater_role,
-                s1, s2, s3,
-                comment,
+                s1, s2, s3, comment,
             ),
         )
         await conn.commit()
+    #送出之後回到案件詳情畫面
+    return RedirectResponse(f"/projects/{project_id}",status_code=status.HTTP_302_FOUND,)
 
-    # 6. 評完回案件詳情
-    return RedirectResponse(
-        f"/projects/{project_id}",
-        status_code=status.HTTP_302_FOUND,
-    )
-
-
-# ================= 評價功能：查看歷史評價 =================
-
-# 委託人評價列表
+#顯示委託人歷史評價畫面
 @app.get("/ratings/client/{user_id}", response_class=HTMLResponse)
 async def view_client_ratings(request: Request, user_id: int, conn = Depends(getDB)):
     user = await current_user(request, conn)
     if not user:
         return RedirectResponse("/login")
-
+    #從DB找出要被查看的人
     async with conn.cursor(row_factory=dict_row) as cur:
         await cur.execute("SELECT id, username FROM users WHERE id=%s;", (user_id,))
         target = await cur.fetchone()
         if not target:
             raise HTTPException(404, "找不到使用者")
-
-        # 平均分數
+        #計算平均分數&共有幾筆評價
         await cur.execute(
             """
             SELECT 
@@ -868,8 +809,7 @@ async def view_client_ratings(request: Request, user_id: int, conn = Depends(get
             (user_id,),
         )
         stats = await cur.fetchone()
-
-        # 各筆評價 + 質性評論
+        #找出每一筆評價 & 質性評論
         await cur.execute(
             """
             SELECT r.*, u.username AS rater_username, p.title AS project_title
@@ -882,38 +822,30 @@ async def view_client_ratings(request: Request, user_id: int, conn = Depends(get
             (user_id,),
         )
         items = await cur.fetchall()
-
-    dim_labels = ["需求合理性", "驗收難度", "合作態度"]
-    role_label = "委託人"
-
+    dim_labels = ["需求合理性", "驗收難度", "合作態度"]  #在HTML顯示用
+    role_label = "委託人"  #在HTML顯示用
     return templates.TemplateResponse(
         "ratings_user.html",
         {
-            "request": request,
-            "user": user,
-            "target": target,
-            "role": "client",
-            "role_label": role_label,
-            "dim_labels": dim_labels,
-            "stats": stats,
-            "items": items,
+            "request": request, "user": user,
+            "target": target, "role": "client",
+            "role_label": role_label,"dim_labels": dim_labels,
+            "stats": stats, "items": items,
         },
     )
-
-
-# 接案人評價列表
+#顯示接案人歷史評價畫面
 @app.get("/ratings/contractor/{user_id}", response_class=HTMLResponse)
 async def view_contractor_ratings(request: Request, user_id: int, conn = Depends(getDB)):
     user = await current_user(request, conn)
     if not user:
         return RedirectResponse("/login")
-
+    #從DB找出要被查看的人
     async with conn.cursor(row_factory=dict_row) as cur:
         await cur.execute("SELECT id, username FROM users WHERE id=%s;", (user_id,))
         target = await cur.fetchone()
         if not target:
             raise HTTPException(404, "找不到使用者")
-
+        #計算平均分數&共有幾筆評價
         await cur.execute(
             """
             SELECT 
@@ -927,7 +859,7 @@ async def view_contractor_ratings(request: Request, user_id: int, conn = Depends
             (user_id,),
         )
         stats = await cur.fetchone()
-
+        #找出每一筆評價 & 質性評論
         await cur.execute(
             """
             SELECT r.*, u.username AS rater_username, p.title AS project_title
@@ -940,57 +872,44 @@ async def view_contractor_ratings(request: Request, user_id: int, conn = Depends
             (user_id,),
         )
         items = await cur.fetchall()
-
-    dim_labels = ["產出品質", "執行效率", "合作態度"]
-    role_label = "接案人"
-
+    dim_labels = ["產出品質", "執行效率", "合作態度"]  #在HTML顯示用
+    role_label = "接案人"  #在HTML顯示用
     return templates.TemplateResponse(
         "ratings_user.html",
         {
-            "request": request,
-            "user": user,
-            "target": target,
-            "role": "contractor",
-            "role_label": role_label,
-            "dim_labels": dim_labels,
-            "stats": stats,
-            "items": items,
+            "request": request, "user": user,
+            "target": target, "role": "contractor",
+            "role_label": role_label, "dim_labels": dim_labels,
+            "stats": stats, "items": items,
         },
     )
 
-#==============Issue=================
-
-# ============== Issue ==============
-
-
-# 顯示新增 Issue 的表單
+# =============== 待解決事項功能(Issue) =================
+#顯示新增 Issue 的畫面
 @app.get("/projects/{project_id}/issues/new", response_class=HTMLResponse)
 async def issue_new_page(request: Request, project_id: int, conn=Depends(getDB)):
     user = await current_user(request, conn)
     if not user:
         return RedirectResponse("/login")
-
     async with conn.cursor(row_factory=dict_row) as cur:
+        #從DB找出案件相關資訊
         await cur.execute("""
             SELECT id, title, client_id, status
             FROM projects
             WHERE id=%s;
         """, (project_id,))
         p = await cur.fetchone()
-
+    #確認案件是否存在
     if not p:
         raise HTTPException(404, "找不到案件")
+    #確認此案件真的屬於此委託人
     if user["id"] != p["client_id"]:
         raise HTTPException(403, "無權限")
-    if p["status"] not in ("submitted", "in_progress", "reject"):
+    #確認案件狀態是否可新增issue
+    if p["status"] not in ("submitted", "reject"):
         raise HTTPException(400, "此狀態不可新增 Issue")
-
-    return templates.TemplateResponse(
-        "issue_create.html",
-        {"request": request, "user": user, "project": p}
-    )
-
-# 建立 issue（只有此案件委託人可開）
+    return templates.TemplateResponse("issue_create.html", {"request": request, "user": user, "project": p})
+#接收案件委託人建立的issue相關內容
 @app.post("/projects/{project_id}/issues/create")
 async def issue_create(
     request: Request,
@@ -1002,32 +921,32 @@ async def issue_create(
     user = await current_user(request, conn)
     if not user:
         return RedirectResponse("/login")
-
     async with conn.cursor(row_factory=dict_row) as cur:
-        # ★(2) 權限檢查：必須是此案件的委託人才能開 Issue
+        #從DB找出案件相關資訊
         await cur.execute("""
             SELECT client_id, status
             FROM projects
             WHERE id=%s;
         """, (project_id,))
         p = await cur.fetchone()
+        #確認案件是否存在
         if not p:
             raise HTTPException(404, "找不到案件")
+        #確認此案件真的屬於此委託人
         if user["id"] != p["client_id"]:
             raise HTTPException(403, "只有此案件的委託人可以開 Issue")
+        #確認案件狀態是否可新增issue
         if p["status"] not in ("submitted", "in_progress", "reject"):
             raise HTTPException(400, "此專案狀態不可新增 Issue")
-
+        #把新增的issue寫入DB
         await cur.execute("""
             INSERT INTO issues (project_id, opener_id, title, description)
             VALUES (%s,%s,%s,%s);
         """, (project_id, user["id"], title, description))
         await conn.commit()
+    return RedirectResponse(f"/projects/{project_id}", status_code=302)  #回到案件詳情畫面
 
-    return RedirectResponse(f"/projects/{project_id}?notice=issue_created", status_code=302)
-
-
-# 回覆 issue（只有此案件委託人或接案人可回覆）
+#新增issue留言
 @app.post("/issues/{issue_id}/comment")
 async def issue_comment(
     request: Request,
@@ -1038,9 +957,8 @@ async def issue_comment(
     user = await current_user(request, conn)
     if not user:
         return RedirectResponse("/login")
-
     async with conn.cursor(row_factory=dict_row) as cur:
-        # ★ 先確認 issue 存在 + 權限 + 狀態
+        #從DB找出issue相關資訊
         await cur.execute("""
             SELECT i.project_id, i.status,
                    p.client_id, p.contractor_id
@@ -1049,59 +967,53 @@ async def issue_comment(
             WHERE i.id=%s;
         """, (issue_id,))
         row = await cur.fetchone()
+        #確認issue是否存在
         if not row:
             raise HTTPException(404, "找不到 Issue")
-
-        # resolved 後誰都不能再留言
+        #確認狀態
         if row["status"] == "resolved":
             raise HTTPException(400, "此 Issue 已完成，無法再留言")
-
+        #確認是否為此案件的委託人和接案人
         if user["id"] not in (row["client_id"], row["contractor_id"]):
             raise HTTPException(403, "無權限留言")
-
+        #把新增的留言寫進DB
         await cur.execute("""
             INSERT INTO issue_comments (issue_id, author_id, content)
             VALUES (%s,%s,%s);
         """, (issue_id, user["id"], content))
         await conn.commit()
+    return RedirectResponse(request.headers.get("referer", f"/projects/{row['project_id']}"), status_code=302)  #回到送出留言的那個畫面
 
-    return RedirectResponse(request.headers.get("referer", f"/projects/{row['project_id']}"), status_code=302)
-
-
-# 關閉 issue（只有此案件委託人可關）
+#關閉issue
 @app.post("/issues/{issue_id}/resolve")
 async def issue_resolve(issue_id: int, request: Request, conn=Depends(getDB)):
     user = await current_user(request, conn)
     if not user:
         return RedirectResponse("/login")
-
     async with conn.cursor(row_factory=dict_row) as cur:
-        # ★(4) 權限檢查
+        #找出這個issue的委託人是誰
         await cur.execute("""
-            SELECT p.client_id, i.project_id 
+            SELECT p.client_id
             FROM issues i
             JOIN projects p ON p.id = i.project_id
             WHERE i.id=%s;
         """, (issue_id,))
         row = await cur.fetchone()
-        
+        #確認issue是否存在
         if not row:
             raise HTTPException(404, "找不到 Issue")
-
+        #確認此issue是否屬於此委託人
         if user["id"] != row["client_id"]:
             raise HTTPException(403, "只有此案件的委託人可以關閉 Issue")
-
-        # ===========【請加入以下這段程式碼】===========
-        # 更新資料庫狀態
-        await cur.execute("UPDATE issues SET status='resolved' WHERE id=%s", (issue_id,))
+        #更新資料庫狀態&紀錄完成時間
+        await cur.execute("""
+            UPDATE issues
+            SET status='resolved', resolved_at=NOW()
+            WHERE id=%s;
+        """, (issue_id,))
         await conn.commit()
-        # ============================================
-
-    # 導回原本的專案頁面
-    return RedirectResponse(f"/projects/{row['project_id']}", status_code=302)
+    return RedirectResponse(request.headers.get("referer", f"/projects/{row['project_id']}"), status_code=302)  #回到點擊關閉按鈕的那個畫面
 
 @app.on_event("shutdown")
 async def _shutdown():
-
     await close_pool()
-
